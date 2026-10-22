@@ -59,6 +59,8 @@ func withSpot() func(*sku) { return withCap("LowPriorityCapable", "True") }
 
 func withDiskControllers(v string) func(*sku) { return withCap("DiskControllerTypes", v) }
 
+func withNICs(n int) func(*sku) { return withCap("MaxNetworkInterfaces", strconv.Itoa(n)) }
+
 func withZones(zones ...string) func(*sku) {
 	return func(s *sku) { s.Zones = zones }
 }

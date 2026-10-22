@@ -18,7 +18,11 @@ type Filter struct {
 	MemoryGiB *float64
 	GPUs      *int
 
-	// ExactMatch makes CPUs, MemoryGiB and GPUs exact values instead of minimums.
+	// NICs is the number of network interfaces the SKU must be able to take.
+	NICs *int
+
+	// ExactMatch makes CPUs, MemoryGiB, GPUs and NICs exact values instead of
+	// minimums.
 	ExactMatch bool
 
 	Arch       Arch
@@ -70,6 +74,7 @@ func (f Filter) LogValue() slog.Value {
 		slog.String("cpus", optional(f.CPUs)),
 		slog.String("memory_gib", optional(f.MemoryGiB)),
 		slog.String("gpus", optional(f.GPUs)),
+		slog.String("nics", optional(f.NICs)),
 		slog.Bool("exact_match", f.ExactMatch),
 		slog.String("arch", arch),
 		slog.String("categories", categories),
@@ -497,6 +502,14 @@ func parseVM(s sku) (VM, bool) {
 		}
 	}
 
+	// A NIC limit that cannot be read is unknown rather than a reason to skip
+	// the SKU, so it cannot hide a SKU from a search that does not ask about
+	// NICs.
+	var nics *int
+	if n, ok := parseInt(s.Capabilities["MaxNetworkInterfaces"], 1); ok {
+		nics = &n
+	}
+
 	cats := categoriesOf(seriesLetter(s.Name), gpus)
 
 	_, hasControllers := s.Capabilities["DiskControllerTypes"]
@@ -508,6 +521,7 @@ func parseVM(s sku) (VM, bool) {
 		VCPUsAvailable: available,
 		MemoryGiB:      memory,
 		GPUs:           gpus,
+		MaxNICs:        nics,
 		Arch:           archFromCapability(s.Capabilities["CpuArchitectureType"]),
 		Category:       categoryLabel(cats),
 		Zones:          []string{},
@@ -587,6 +601,11 @@ func matches(v VM, f Filter) bool {
 	}
 
 	if f.GPUs != nil && !matchesInt(v.GPUs, *f.GPUs, f.ExactMatch) {
+		return false
+	}
+
+	// An unknown NIC limit never matches: assuming it would be a guess.
+	if f.NICs != nil && (v.MaxNICs == nil || !matchesInt(*v.MaxNICs, *f.NICs, f.ExactMatch)) {
 		return false
 	}
 

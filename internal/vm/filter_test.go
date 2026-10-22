@@ -163,19 +163,19 @@ func TestFilter_LogValue(t *testing.T) {
 			name:   "zero",
 			filter: Filter{},
 			want: []string{
-				"f.cpus=any", "f.memory_gib=any", "f.gpus=any", "f.arch=any", "f.categories=any",
+				"f.cpus=any", "f.memory_gib=any", "f.gpus=any", "f.nics=any", "f.arch=any", "f.categories=any",
 				"f.disk_controller=any", "f.limit=0",
 			},
 		},
 		{
 			name: "full",
 			filter: Filter{
-				CPUs: new(4), MemoryGiB: new(3.5), GPUs: new(1), ExactMatch: true,
+				CPUs: new(4), MemoryGiB: new(3.5), GPUs: new(1), NICs: new(3), ExactMatch: true,
 				Arch: ArchARM64, Categories: []Category{CategoryMemory, CategoryGPU}, DiskController: DiskControllerNVMe,
 				OS: OSWindows, IncludeSpot: true, Sort: Sort{Key: SortMemory, Desc: true}, Limit: 5,
 			},
 			want: []string{
-				"f.cpus=4", "f.memory_gib=3.5", "f.gpus=1", "f.exact_match=true", "f.arch=arm64",
+				"f.cpus=4", "f.memory_gib=3.5", "f.gpus=1", "f.nics=3", "f.exact_match=true", "f.arch=arm64",
 				"f.categories=memory,gpu", "f.disk_controller=nvme", "f.os=windows", "f.include_spot=true", "f.sort=memory:desc", "f.limit=5",
 			},
 		},
@@ -242,6 +242,9 @@ func TestParseVM(t *testing.T) {
 		{name: "arch not known", sku: d4(withCap("CpuArchitectureType", "Power")), want: base(func(v *VM) { v.Arch = archUnknown })},
 		{name: "spot capable", sku: d4(withCap("LowPriorityCapable", "True")), want: base(func(v *VM) { v.SpotCapable = true })},
 		{name: "not spot capable", sku: d4(withCap("LowPriorityCapable", "false")), want: base(nil)},
+		{name: "NICs", sku: d4(withNICs(4)), want: base(func(v *VM) { v.MaxNICs = new(4) })},
+		{name: "NICs not a number are unknown", sku: d4(withCap("MaxNetworkInterfaces", "x")), want: base(nil)},
+		{name: "NICs of zero are unknown", sku: d4(withNICs(0)), want: base(nil)},
 		{name: "SCSI only", sku: d4(withDiskControllers("SCSI")), want: base(nil)},
 		{
 			name: "NVMe only",
@@ -377,6 +380,7 @@ func TestMatches(t *testing.T) {
 	nvme := vmOf(t, skuOf("Standard_D4s_v6", "standardDSv6Family", 4, 16, withDiskControllers("NVMe")))
 	both := vmOf(t, skuOf("Standard_E4bs_v5", "standardEBSv5Family", 4, 32, withDiskControllers("SCSI,NVMe")))
 	none := vmOf(t, skuOf("Standard_D4y", "", 4, 16, withDiskControllers("IDE")))
+	nics4 := vmOf(t, skuOf("Standard_E8s_v5", "standardESv5Family", 8, 64, withNICs(4)))
 
 	tests := []struct {
 		name   string
@@ -409,6 +413,11 @@ func TestMatches(t *testing.T) {
 		{name: "CPUs are those available", vm: e84, filter: Filter{CPUs: new(8)}, want: false},
 		{name: "exact CPUs", vm: e84, filter: Filter{CPUs: new(4), ExactMatch: true}, want: true},
 		{name: "exact CPUs differ", vm: d4, filter: Filter{CPUs: new(2), ExactMatch: true}, want: false},
+		{name: "minimum NICs met", vm: nics4, filter: Filter{NICs: new(3)}, want: true},
+		{name: "minimum NICs not met", vm: nics4, filter: Filter{NICs: new(5)}, want: false},
+		{name: "exact NICs", vm: nics4, filter: Filter{NICs: new(4), ExactMatch: true}, want: true},
+		{name: "exact NICs differ", vm: nics4, filter: Filter{NICs: new(2), ExactMatch: true}, want: false},
+		{name: "unknown NICs never match", vm: d4, filter: Filter{NICs: new(1)}, want: false},
 		{name: "minimum GPUs met", vm: nc, filter: Filter{GPUs: new(1)}, want: true},
 		{name: "minimum GPUs not met", vm: d4, filter: Filter{GPUs: new(1)}, want: false},
 		{name: "exact zero GPUs", vm: d4, filter: Filter{GPUs: new(0), ExactMatch: true}, want: true},

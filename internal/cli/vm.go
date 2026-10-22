@@ -24,11 +24,13 @@ func newVMCmd(application *app.App) *cobra.Command {
 		Long: `Find Azure virtual machine SKUs that meet your requirements and can be deployed.
 
 Candidate SKUs are filtered by the number of vCPUs (--cpus), the amount of
-memory in GiB (--memory), the number of GPUs (--gpus), the CPU architecture
-(--arch), the category of VM (--category) and the disk controller
-(--disk-controller). Requirements you leave out are not applied. By default the numbers are minimums; with --exact-match they must
-match exactly. For SKUs with constrained cores, --cpus is the number of vCPUs
-the guest sees; quota is still counted against the larger number Azure bills.
+memory in GiB (--memory), the number of GPUs (--gpus), the number of network
+interfaces the SKU can take (--nics), the CPU architecture (--arch), the category
+of VM (--category) and the disk controller (--disk-controller). Requirements you
+leave out are not applied. By default the numbers are minimums; with
+--exact-match they must match exactly. For SKUs with constrained cores, --cpus is
+the number of vCPUs the guest sees; quota is still counted against the larger
+number Azure bills.
 
 The results are then narrowed further using information from your subscription
 (--subscription-id), so that SKUs you cannot use are not suggested:
@@ -64,6 +66,7 @@ keeps Spot-capable SKUs that lack on-demand quota but fit the Spot quota, marked
   * name
   * vcpus
   * memory
+  * nics
   * gpus
   * arch
   * category
@@ -100,7 +103,8 @@ Everything is read live from Azure, so quota is always current.`,
 	f.IntP("cpus", "c", 0, usage("cpus", "number of vCPUs: a minimum, or exact with --exact-match"))
 	f.Float64P("memory", "m", 0, usage("memory", "memory in GiB: a minimum, or exact with --exact-match"))
 	f.IntP("gpus", "g", 0, usage("gpus", "number of GPUs: a minimum, or exact with --exact-match (--gpus 0 --exact-match means none)"))
-	f.BoolP("exact-match", "e", false, usage("exact-match", "make --cpus, --memory and --gpus exact values instead of minimums"))
+	f.Int("nics", 0, usage("nics", "number of network interfaces the VM must take: a minimum, or exact with --exact-match"))
+	f.BoolP("exact-match", "e", false, usage("exact-match", "make --cpus, --memory, --gpus and --nics exact values instead of minimums"))
 	f.StringP("arch", "a", "any", usage("arch", "CPU architecture: "+strings.Join(vm.ArchNames(), ", ")))
 	f.StringP("category", "C", "", usage("category", "kind of VM, comma separated: "+strings.Join(vm.CategoryNames(), ", ")))
 	f.String("disk-controller", "any", usage("disk-controller", "disk controller the VM must support, as the image may need: "+strings.Join(vm.DiskControllerNames(), ", ")))
@@ -163,6 +167,10 @@ func readVMOptions(v *viper.Viper) (vmOptions, error) {
 	}
 
 	if o.Filter.GPUs, err = readOptionalInt(v, "gpus"); err != nil {
+		return o, err
+	}
+
+	if o.Filter.NICs, err = readOptionalInt(v, "nics"); err != nil {
 		return o, err
 	}
 

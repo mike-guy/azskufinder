@@ -163,12 +163,12 @@ func (errWriter) Write([]byte) (int, error) { return 0, errWrite }
 
 // sampleVMs covers each way a cell can be shown: a constrained-core SKU, GPUs,
 // an unknown price, several quotas, no quota, Spot only, each eviction value,
-// and each set of disk controllers, including none known.
+// each set of disk controllers, including none known, and an unknown NIC limit.
 func sampleVMs() []vm.VM {
 	return []vm.VM{
 		{
 			Name: "Standard_D4s_v5", Family: "standardDSv5Family",
-			VCPUs: 4, VCPUsAvailable: 4, MemoryGiB: 16,
+			VCPUs: 4, VCPUsAvailable: 4, MemoryGiB: 16, MaxNICs: new(2),
 			Arch: vm.ArchX64, Category: vm.CategoryGeneral, Zones: []string{"1", "2", "3"},
 			DiskControllers: []vm.DiskController{vm.DiskControllerSCSI},
 			SpotCapable:     true,
@@ -181,7 +181,7 @@ func sampleVMs() []vm.VM {
 		},
 		{
 			Name: "Standard_E8-4s_v5", Family: "standardESv5Family",
-			VCPUs: 8, VCPUsAvailable: 4, MemoryGiB: 64,
+			VCPUs: 8, VCPUsAvailable: 4, MemoryGiB: 64, MaxNICs: new(4),
 			Arch: vm.ArchX64, Category: vm.CategoryMemory, Zones: []string{},
 			DiskControllers: []vm.DiskController{vm.DiskControllerSCSI, vm.DiskControllerNVMe},
 			SpotCapable:     true,
@@ -191,7 +191,7 @@ func sampleVMs() []vm.VM {
 		},
 		{
 			Name: "Standard_NC4as_T4_v3", Family: "standardNCASv3_T4Family",
-			VCPUs: 4, VCPUsAvailable: 4, MemoryGiB: 28, GPUs: 1,
+			VCPUs: 4, VCPUsAvailable: 4, MemoryGiB: 28, GPUs: 1, MaxNICs: new(8),
 			Arch: vm.ArchX64, Category: vm.CategoryGPU, Zones: []string{"2"},
 			DiskControllers: []vm.DiskController{vm.DiskControllerNVMe},
 			SpotCapable:     true, SpotOnly: true,

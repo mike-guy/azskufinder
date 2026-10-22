@@ -80,6 +80,10 @@ func describeFilter(f vm.Filter) []criterion {
 		out = append(out, criterion{Name: "GPUs", Value: compare + " " + strconv.Itoa(*f.GPUs)})
 	}
 
+	if f.NICs != nil && constrains(float64(*f.NICs)) {
+		out = append(out, criterion{Name: "NICs", Value: compare + " " + strconv.Itoa(*f.NICs)})
+	}
+
 	if f.Arch != "" {
 		out = append(out, criterion{Name: "architecture", Value: string(f.Arch)})
 	}
@@ -350,6 +354,7 @@ func vmColumns(st output.Styles, currency string, withSpot bool) []output.Column
 		{Header: "VCPUS", Align: output.AlignRight, Value: vcpuText},
 		{Header: "MEMORY", Align: output.AlignRight, Value: func(v vm.VM) string { return gib(v.MemoryGiB) }},
 		{Header: "DISK", Value: diskControllerText},
+		{Header: "NICS", Align: output.AlignRight, Value: nicText},
 		{Header: "GPUS", Align: output.AlignRight, Value: gpuText},
 		{Header: "ARCH", Value: func(v vm.VM) string { return string(v.Arch) }},
 		{Header: "CATEGORY", Value: func(v vm.VM) string { return string(v.Category) }},
@@ -396,6 +401,16 @@ func gpuText(v vm.VM) string {
 	}
 
 	return strconv.Itoa(v.GPUs)
+}
+
+// nicText shows the most network interfaces the SKU takes, or NoValue when
+// Azure did not say.
+func nicText(v vm.VM) string {
+	if v.MaxNICs == nil {
+		return output.NoValue
+	}
+
+	return strconv.Itoa(*v.MaxNICs)
 }
 
 // diskControllerText shows the disk controllers as Azure writes them, such as

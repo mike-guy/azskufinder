@@ -17,6 +17,7 @@ results[].diskControllers array
 results[].diskControllers[] string
 results[].family string
 results[].gpus number
+results[].maxNetworkInterfaces number nullable
 results[].memoryGiB number
 results[].name string
 results[].pricing object
