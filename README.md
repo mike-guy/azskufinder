@@ -11,8 +11,6 @@
 <p align="center">
   <a href="https://github.com/mike-guy/azskufinder/releases/latest"><img src="https://img.shields.io/github/v/release/mike-guy/azskufinder?sort=semver" alt="Latest release"></a>
   <a href="https://github.com/mike-guy/azskufinder/actions/workflows/security.yml"><img src="https://github.com/mike-guy/azskufinder/actions/workflows/security.yml/badge.svg?branch=main" alt="Security checks"></a>
-  <a href="https://pkg.go.dev/github.com/mike-guy/azskufinder"><img src="https://pkg.go.dev/badge/github.com/mike-guy/azskufinder.svg" alt="Go Reference"></a>
-  <a href="https://goreportcard.com/report/github.com/mike-guy/azskufinder"><img src="https://goreportcard.com/badge/github.com/mike-guy/azskufinder" alt="Go Report Card"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/mike-guy/azskufinder"><img src="https://api.scorecard.dev/projects/github.com/mike-guy/azskufinder/badge" alt="OpenSSF Scorecard"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/mike-guy/azskufinder" alt="Licence: MIT"></a>
 </p>
@@ -204,6 +202,14 @@ Check it with the [GitHub CLI](https://cli.github.com/):
 
 ```sh
 gh attestation verify azskufinder_0.1.0_linux_amd64.tar.gz --repo mike-guy/azskufinder
+```
+
+The attestation is attached to the release too (`azskufinder_<version>.sigstore.json`),
+so you can check a download without asking GitHub for it:
+
+```sh
+gh attestation verify azskufinder_0.1.0_linux_amd64.tar.gz \
+  --bundle azskufinder_0.1.0.sigstore.json --repo mike-guy/azskufinder
 ```
 
 Or check the archive against the release's `checksums.txt`:

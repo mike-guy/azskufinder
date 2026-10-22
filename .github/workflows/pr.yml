@@ -56,9 +56,7 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: Install Make
-        if: runner.os == 'Windows'
-        run: command -v make || choco install make --yes --no-progress
+      # Every runner image includes make (on Windows, from MinGW).
       - name: Run Tests
         run: make test
 

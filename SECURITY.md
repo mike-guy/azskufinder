@@ -26,6 +26,10 @@ download with the [GitHub CLI](https://cli.github.com/):
 gh attestation verify azskufinder_0.1.0_darwin_arm64.tar.gz --repo mike-guy/azskufinder
 ```
 
+The attestation is also attached to each release as
+`azskufinder_<version>.sigstore.json`. Add `--bundle` with that file to check a
+download offline.
+
 Each release also has a `checksums.txt` file:
 
 ```sh
