@@ -162,15 +162,16 @@ type errWriter struct{}
 func (errWriter) Write([]byte) (int, error) { return 0, errWrite }
 
 // sampleVMs covers each way a cell can be shown: a constrained-core SKU, GPUs,
-// an unknown price, several quotas, no quota, Spot only, and each eviction
-// value.
+// an unknown price, several quotas, no quota, Spot only, each eviction value,
+// and each set of disk controllers, including none known.
 func sampleVMs() []vm.VM {
 	return []vm.VM{
 		{
 			Name: "Standard_D4s_v5", Family: "standardDSv5Family",
 			VCPUs: 4, VCPUsAvailable: 4, MemoryGiB: 16,
 			Arch: vm.ArchX64, Category: vm.CategoryGeneral, Zones: []string{"1", "2", "3"},
-			SpotCapable: true,
+			DiskControllers: []vm.DiskController{vm.DiskControllerSCSI},
+			SpotCapable:     true,
 			Quota: []vm.QuotaHeadroom{
 				{Name: "standardDSv5Family", Limit: 100, Used: 20, Free: 80},
 				{Name: "cores", Limit: 50, Used: 10, Free: 40},
@@ -182,16 +183,18 @@ func sampleVMs() []vm.VM {
 			Name: "Standard_E8-4s_v5", Family: "standardESv5Family",
 			VCPUs: 8, VCPUsAvailable: 4, MemoryGiB: 64,
 			Arch: vm.ArchX64, Category: vm.CategoryMemory, Zones: []string{},
-			SpotCapable: true,
-			Quota:       []vm.QuotaHeadroom{{Name: "standardESv5Family", Limit: 24, Used: 0, Free: 24}},
-			Pricing:     vm.Pricing{OnDemandHourly: new(0.504), OnDemandMonthly: new(367.92)},
-			Spot:        &vm.Spot{HourlyPrice: new(0.1008)},
+			DiskControllers: []vm.DiskController{vm.DiskControllerSCSI, vm.DiskControllerNVMe},
+			SpotCapable:     true,
+			Quota:           []vm.QuotaHeadroom{{Name: "standardESv5Family", Limit: 24, Used: 0, Free: 24}},
+			Pricing:         vm.Pricing{OnDemandHourly: new(0.504), OnDemandMonthly: new(367.92)},
+			Spot:            &vm.Spot{HourlyPrice: new(0.1008)},
 		},
 		{
 			Name: "Standard_NC4as_T4_v3", Family: "standardNCASv3_T4Family",
 			VCPUs: 4, VCPUsAvailable: 4, MemoryGiB: 28, GPUs: 1,
 			Arch: vm.ArchX64, Category: vm.CategoryGPU, Zones: []string{"2"},
-			SpotCapable: true, SpotOnly: true,
+			DiskControllers: []vm.DiskController{vm.DiskControllerNVMe},
+			SpotCapable:     true, SpotOnly: true,
 			Quota:   []vm.QuotaHeadroom{{Name: "standardNCASv3_T4Family", Limit: 0, Used: 0, Free: 0}},
 			Pricing: vm.Pricing{OnDemandHourly: new(0.526), OnDemandMonthly: new(383.98)},
 			Spot:    &vm.Spot{HourlyPrice: new(0.1052), EvictionRate: new("5-10")},
@@ -200,7 +203,8 @@ func sampleVMs() []vm.VM {
 			Name: "Standard_D2pls_v5", Family: "standardDPLSv5Family",
 			VCPUs: 2, VCPUsAvailable: 2, MemoryGiB: 4,
 			Arch: vm.ArchARM64, Category: vm.CategoryGeneral, Zones: []string{},
-			Quota: []vm.QuotaHeadroom{{Name: "standardDPLSv5Family", Limit: 10, Used: 10, Free: 0}},
+			DiskControllers: []vm.DiskController{},
+			Quota:           []vm.QuotaHeadroom{{Name: "standardDPLSv5Family", Limit: 10, Used: 10, Free: 0}},
 		},
 	}
 }

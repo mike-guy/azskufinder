@@ -24,6 +24,10 @@ type Filter struct {
 	Arch       Arch
 	Categories []Category
 
+	// DiskController keeps only SKUs that support this disk controller. The
+	// empty value means any.
+	DiskController DiskController
+
 	// OS selects which operating system's prices are used.
 	OS OS
 
@@ -57,6 +61,11 @@ func (f Filter) LogValue() slog.Value {
 		categories = strings.Join(names, ",")
 	}
 
+	diskController := string(f.DiskController)
+	if diskController == "" {
+		diskController = "any"
+	}
+
 	return slog.GroupValue(
 		slog.String("cpus", optional(f.CPUs)),
 		slog.String("memory_gib", optional(f.MemoryGiB)),
@@ -64,6 +73,7 @@ func (f Filter) LogValue() slog.Value {
 		slog.Bool("exact_match", f.ExactMatch),
 		slog.String("arch", arch),
 		slog.String("categories", categories),
+		slog.String("disk_controller", diskController),
 		slog.String("os", string(f.OS)),
 		slog.Bool("include_spot", f.IncludeSpot),
 		slog.String("sort", f.Sort.String()),
@@ -108,6 +118,41 @@ func ParseArch(s string) (Arch, error) {
 		return ArchARM64, nil
 	default:
 		return "", fmt.Errorf("unknown architecture %q: use one of %s", s, strings.Join(ArchNames(), ", "))
+	}
+}
+
+// DiskController is a disk controller a SKU can attach disks with. The empty
+// value means any.
+//
+// It matters because of the image: an image without NVMe drivers cannot boot
+// on a SKU that supports only NVMe, and an image tagged as needing NVMe cannot
+// be used on a SKU that supports only SCSI.
+type DiskController string
+
+// Disk controllers a requirement can ask for.
+const (
+	DiskControllerSCSI DiskController = "scsi"
+	DiskControllerNVMe DiskController = "nvme"
+)
+
+// DiskControllerNames returns the values accepted for the disk controller
+// requirement, for help text and completion.
+func DiskControllerNames() []string {
+	return []string{"any", string(DiskControllerSCSI), string(DiskControllerNVMe)}
+}
+
+// ParseDiskController reads a disk controller requirement. "any" and "" mean
+// no requirement and return "".
+func ParseDiskController(s string) (DiskController, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "any":
+		return "", nil
+	case string(DiskControllerSCSI):
+		return DiskControllerSCSI, nil
+	case string(DiskControllerNVMe):
+		return DiskControllerNVMe, nil
+	default:
+		return "", fmt.Errorf("unknown disk controller %q: use one of %s", s, strings.Join(DiskControllerNames(), ", "))
 	}
 }
 
@@ -454,6 +499,8 @@ func parseVM(s sku) (VM, bool) {
 
 	cats := categoriesOf(seriesLetter(s.Name), gpus)
 
+	_, hasControllers := s.Capabilities["DiskControllerTypes"]
+
 	return VM{
 		Name:           s.Name,
 		Family:         s.Family,
@@ -467,7 +514,43 @@ func parseVM(s sku) (VM, bool) {
 		SpotCapable:    strings.EqualFold(s.Capabilities["LowPriorityCapable"], "true"),
 		Quota:          []QuotaHeadroom{},
 		categories:     cats,
+
+		DiskControllers: diskControllersFromCapability(s.Capabilities["DiskControllerTypes"], hasControllers),
 	}, true
+}
+
+// diskControllersFromCapability reads a SKU's DiskControllerTypes capability,
+// such as "SCSI", "NVMe" or "SCSI,NVMe" (Azure uses either order). Azure
+// leaves the capability out of older SKUs and documents SCSI as the default
+// then, so that is not a guess. Names it does not know are dropped rather than
+// failing the SKU, so a new controller cannot hide a SKU from a search that
+// does not ask about controllers.
+func diskControllersFromCapability(s string, present bool) []DiskController {
+	if !present {
+		return []DiskController{DiskControllerSCSI}
+	}
+
+	var scsi, nvme bool
+
+	for part := range strings.SplitSeq(s, ",") {
+		switch DiskController(strings.ToLower(strings.TrimSpace(part))) {
+		case DiskControllerSCSI:
+			scsi = true
+		case DiskControllerNVMe:
+			nvme = true
+		}
+	}
+
+	out := []DiskController{}
+	if scsi {
+		out = append(out, DiskControllerSCSI)
+	}
+
+	if nvme {
+		out = append(out, DiskControllerNVMe)
+	}
+
+	return out
 }
 
 // archFromCapability reads a SKU's CpuArchitectureType capability as Azure
@@ -490,6 +573,10 @@ func matches(v VM, f Filter) bool {
 
 	if len(f.Categories) > 0 &&
 		!slices.ContainsFunc(f.Categories, func(want Category) bool { return slices.Contains(v.categories, want) }) {
+		return false
+	}
+
+	if f.DiskController != "" && !slices.Contains(v.DiskControllers, f.DiskController) {
 		return false
 	}
 

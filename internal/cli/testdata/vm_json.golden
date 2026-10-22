@@ -47,6 +47,9 @@
         "2",
         "3"
       ],
+      "diskControllers": [
+        "scsi"
+      ],
       "spotCapable": true,
       "spotOnly": false,
       "quota": [
@@ -82,6 +85,10 @@
       "architecture": "x64",
       "category": "memory",
       "zones": [],
+      "diskControllers": [
+        "scsi",
+        "nvme"
+      ],
       "spotCapable": true,
       "spotOnly": false,
       "quota": [
@@ -113,6 +120,9 @@
       "zones": [
         "2"
       ],
+      "diskControllers": [
+        "nvme"
+      ],
       "spotCapable": true,
       "spotOnly": true,
       "quota": [
@@ -142,6 +152,7 @@
       "architecture": "arm64",
       "category": "general-purpose",
       "zones": [],
+      "diskControllers": [],
       "spotCapable": false,
       "spotOnly": false,
       "quota": [

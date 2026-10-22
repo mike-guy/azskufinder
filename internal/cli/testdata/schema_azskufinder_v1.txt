@@ -13,6 +13,8 @@ results array
 results[] object
 results[].architecture string
 results[].category string
+results[].diskControllers array
+results[].diskControllers[] string
 results[].family string
 results[].gpus number
 results[].memoryGiB number
