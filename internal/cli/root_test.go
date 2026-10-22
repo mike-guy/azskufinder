@@ -114,6 +114,19 @@ func TestRoot_vmOptionsReachRunE(t *testing.T) { //nolint:paralleltest // isolat
 	checkUsageError(t, err, "--subscription-id is required", "Use --subscription-id or set AZSKUFINDER_SUBSCRIPTION_ID.")
 }
 
+// TestRoot_diskControllerFromEnv checks that --disk-controller can come from
+// the environment, by giving it a value RunE rejects.
+func TestRoot_diskControllerFromEnv(t *testing.T) {
+	isolateEnv(t)
+	t.Setenv("AZSKUFINDER_DISK_CONTROLLER", "ide")
+
+	root, _, _ := newTestRoot(t)
+	root.SetArgs([]string{"--config", writeConfig(t, ""), "vm", "--subscription-id", testSubscriptionID, "--location", "uksouth"})
+
+	err := root.ExecuteContext(t.Context())
+	checkUsageError(t, err, `--disk-controller: unknown disk controller "ide": use one of any, scsi, nvme`, "")
+}
+
 func TestLogFailure(t *testing.T) {
 	t.Parallel()
 

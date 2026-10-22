@@ -57,6 +57,8 @@ func withAvailable(n int) func(*sku) { return withCap("vCPUsAvailable", strconv.
 
 func withSpot() func(*sku) { return withCap("LowPriorityCapable", "True") }
 
+func withDiskControllers(v string) func(*sku) { return withCap("DiskControllerTypes", v) }
+
 func withZones(zones ...string) func(*sku) {
 	return func(s *sku) { s.Zones = zones }
 }

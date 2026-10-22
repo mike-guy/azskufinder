@@ -93,6 +93,10 @@ func describeFilter(f vm.Filter) []criterion {
 		out = append(out, criterion{Name: "category", Value: strings.Join(names, " or ")})
 	}
 
+	if f.DiskController != "" {
+		out = append(out, criterion{Name: "disk controller", Value: string(f.DiskController)})
+	}
+
 	return out
 }
 
@@ -136,21 +140,25 @@ func writeLines(b *strings.Builder, lines []string) {
 func noResults(st output.Styles, opts vmOptions, res vm.Result) []string {
 	lines := []string{st.Bold(emptyExplanation(res))}
 
-	if requirements := requirementsText(opts.Filter); requirements != "" {
-		lines = append(lines, "Requirements: "+requirements+".")
+	if requirements := requirementLines(opts.Filter); len(requirements) > 0 {
+		lines = append(lines, "Filters:")
+		lines = append(lines, requirements...)
 	}
 
 	return lines
 }
 
-// vmHeadline says what was found, one fact to a line:
+// vmHeadline says what was found, one fact to a line, with the filters listed
+// under the deployable count so that the line stays short however many are set:
 //
 //	19 matching SKUs in northeurope
-//	12 deployable SKUs (vCPUs = 2, memory = 4 GiB)
+//	12 deployable SKUs with filters:
+//	 - vCPUs = 2
+//	 - Memory = 4 GiB
 //	7 restricted for this subscription
 //
-// The deployable line is green, and the lines about what was left out are
-// yellow. A line whose count is 0 is left out.
+// The deployable line and its filters are green, and the lines about what was
+// left out are yellow. A line whose count is 0 is left out.
 func vmHeadline(st output.Styles, opts vmOptions, res vm.Result) []string {
 	s := res.Summary
 
@@ -159,13 +167,19 @@ func vmHeadline(st output.Styles, opts vmOptions, res vm.Result) []string {
 		deployable = fmt.Sprintf("Showing %d of %d deployable SKUs", s.Shown, s.Eligible)
 	}
 
-	if requirements := requirementsText(opts.Filter); requirements != "" {
-		deployable += " (" + requirements + ")"
+	requirements := requirementLines(opts.Filter)
+	if len(requirements) > 0 {
+		deployable += " with filters:"
 	}
 
 	lines := []string{
 		st.Bold(fmt.Sprintf("%d matching %s in %s", s.Matched, plural(s.Matched, "SKU", "SKUs"), res.Location)),
 		st.Good(deployable),
+	}
+
+	// The filters belong to the deployable line, so they share its colour.
+	for _, r := range requirements {
+		lines = append(lines, st.Good(r))
 	}
 
 	// These can be deployed, so the line is plain rather than a warning.
@@ -205,16 +219,33 @@ func vmFooter(st output.Styles, opts vmOptions, res vm.Result) []string {
 	return lines
 }
 
-// requirementsText joins the requirements as "vCPUs >= 4, memory >= 16 GiB".
-func requirementsText(f vm.Filter) string {
-	criteria := describeFilter(f)
+// requirementLines lists the requirements one to a line, as " - vCPUs >= 4"
+// and " - Memory >= 16 GiB". It is nil when none is set.
+func requirementLines(f vm.Filter) []string {
+	var lines []string
 
-	parts := make([]string, len(criteria))
-	for i, c := range criteria {
-		parts[i] = c.Name + " " + c.Value
+	for _, c := range describeFilter(f) {
+		lines = append(lines, " - "+criterionLabel(c.Name)+" "+c.Value)
 	}
 
-	return strings.Join(parts, ", ")
+	return lines
+}
+
+// criterionLabel capitalises each word of a criterion name for the table, as
+// "Disk Controller". A word already capitalised inside, such as vCPUs or GPUs,
+// is left alone. The JSON keeps the names as they are, as scripts may match on
+// them.
+func criterionLabel(name string) string {
+	words := strings.Fields(name)
+	for i, w := range words {
+		if w != strings.ToLower(w) {
+			continue
+		}
+
+		words[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+
+	return strings.Join(words, " ")
 }
 
 // emptyExplanation says why nothing is shown, in terms of the SKUs counted.
@@ -318,6 +349,7 @@ func vmColumns(st output.Styles, currency string, withSpot bool) []output.Column
 		{Header: "NAME", Value: func(v vm.VM) string { return v.Name }, Style: st.Bold},
 		{Header: "VCPUS", Align: output.AlignRight, Value: vcpuText},
 		{Header: "MEMORY", Align: output.AlignRight, Value: func(v vm.VM) string { return gib(v.MemoryGiB) }},
+		{Header: "DISK", Value: diskControllerText},
 		{Header: "GPUS", Align: output.AlignRight, Value: gpuText},
 		{Header: "ARCH", Value: func(v vm.VM) string { return string(v.Arch) }},
 		{Header: "CATEGORY", Value: func(v vm.VM) string { return string(v.Category) }},
@@ -364,6 +396,26 @@ func gpuText(v vm.VM) string {
 	}
 
 	return strconv.Itoa(v.GPUs)
+}
+
+// diskControllerText shows the disk controllers as Azure writes them, such as
+// "SCSI, NVMe", or NoValue when none is known.
+func diskControllerText(v vm.VM) string {
+	if len(v.DiskControllers) == 0 {
+		return output.NoValue
+	}
+
+	names := make([]string, len(v.DiskControllers))
+	for i, c := range v.DiskControllers {
+		switch c {
+		case vm.DiskControllerSCSI:
+			names[i] = "SCSI"
+		case vm.DiskControllerNVMe:
+			names[i] = "NVMe"
+		}
+	}
+
+	return strings.Join(names, ", ")
 }
 
 // quotaText shows "Spot only", the tightest free quota, or NoValue.

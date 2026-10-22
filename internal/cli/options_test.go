@@ -265,6 +265,16 @@ func TestReadVMOptions(t *testing.T) {
 			want: func(o *vmOptions) { o.Filter.Categories = []vm.Category{vm.CategoryMemory, vm.CategoryGPU} },
 		},
 		{
+			name: "disk controller",
+			set:  with(validVM(), map[string]any{"disk-controller": "NVMe"}),
+			want: func(o *vmOptions) { o.Filter.DiskController = vm.DiskControllerNVMe },
+		},
+		{
+			name: "any disk controller",
+			set:  with(validVM(), map[string]any{"disk-controller": "any"}),
+			want: func(*vmOptions) {},
+		},
+		{
 			name: "sort descending",
 			set:  with(validVM(), map[string]any{"sort-by": "memory:desc"}),
 			want: func(o *vmOptions) { o.Filter.Sort = vm.Sort{Key: vm.SortMemory, Desc: true} },
@@ -409,6 +419,11 @@ func TestReadVMOptions_errors(t *testing.T) {
 			name:    "bad category",
 			set:     with(validVM(), map[string]any{"category": "memory,fast"}),
 			wantMsg: `--category: unknown category "fast": use one of ` + strings.Join(vm.CategoryNames(), ", "),
+		},
+		{
+			name:    "bad disk controller",
+			set:     with(validVM(), map[string]any{"disk-controller": "ide"}),
+			wantMsg: `--disk-controller: unknown disk controller "ide": use one of any, scsi, nvme`,
 		},
 	}
 

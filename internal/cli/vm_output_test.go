@@ -52,10 +52,11 @@ func TestDescribeFilter(t *testing.T) {
 			f:    vm.Filter{Categories: []vm.Category{vm.CategoryMemory, vm.CategoryGPU}},
 			want: []criterion{{"category", "memory or gpu"}},
 		},
+		{name: "disk controller", f: vm.Filter{DiskController: vm.DiskControllerNVMe}, want: []criterion{{"disk controller", "nvme"}}},
 		{
 			name: "everything, in order",
 			f: vm.Filter{
-				Categories: []vm.Category{vm.CategoryCompute}, Arch: vm.ArchX64,
+				DiskController: vm.DiskControllerSCSI, Categories: []vm.Category{vm.CategoryCompute}, Arch: vm.ArchX64,
 				GPUs: new(1), MemoryGiB: new(8.0), CPUs: new(2), ExactMatch: true,
 			},
 			want: []criterion{
@@ -64,6 +65,7 @@ func TestDescribeFilter(t *testing.T) {
 				{"GPUs", "= 1"},
 				{"architecture", "x64"},
 				{"category", "compute"},
+				{"disk controller", "scsi"},
 			},
 		},
 	}
@@ -84,24 +86,38 @@ func TestDescribeFilter(t *testing.T) {
 	}
 }
 
-func TestRequirementsText(t *testing.T) {
+func TestRequirementLines(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name string
 		f    vm.Filter
-		want string
+		want []string
 	}{
-		{name: "nothing set", f: vm.Filter{}, want: ""},
-		{name: "two", f: vm.Filter{CPUs: new(4), MemoryGiB: new(16.0)}, want: "vCPUs >= 4, memory >= 16 GiB"},
+		{name: "nothing set", f: vm.Filter{}, want: nil},
+		{
+			name: "every kind",
+			f: vm.Filter{
+				CPUs: new(2), MemoryGiB: new(4.0), GPUs: new(1), Arch: vm.ArchX64,
+				Categories: []vm.Category{vm.CategoryGeneral}, DiskController: vm.DiskControllerNVMe,
+			},
+			want: []string{
+				" - vCPUs >= 2",
+				" - Memory >= 4 GiB",
+				" - GPUs >= 1",
+				" - Architecture x64",
+				" - Category general-purpose",
+				" - Disk Controller nvme",
+			},
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := requirementsText(tc.f); got != tc.want {
-				t.Errorf("requirementsText() = %q, want %q", got, tc.want)
+			if diff := cmp.Diff(tc.want, requirementLines(tc.f)); diff != "" {
+				t.Errorf("requirementLines() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -190,7 +206,9 @@ func TestVMHeadline(t *testing.T) {
 			summary: vm.Summary{Matched: 19, Eligible: 12, Shown: 12, Restricted: 7},
 			want: []string{
 				"19 matching SKUs in uksouth",
-				"12 deployable SKUs (vCPUs = 2, memory = 4 GiB)",
+				"12 deployable SKUs with filters:",
+				" - vCPUs = 2",
+				" - Memory = 4 GiB",
 				"7 restricted for this subscription",
 			},
 		},
@@ -359,6 +377,20 @@ func TestGPUText(t *testing.T) {
 	})
 }
 
+func TestDiskControllerText(t *testing.T) {
+	t.Parallel()
+	runCellCases(t, "diskControllerText", diskControllerText, []cellCase{
+		{name: "none known", v: vm.VM{DiskControllers: []vm.DiskController{}}, want: output.NoValue},
+		{name: "scsi", v: vm.VM{DiskControllers: []vm.DiskController{vm.DiskControllerSCSI}}, want: "SCSI"},
+		{name: "nvme", v: vm.VM{DiskControllers: []vm.DiskController{vm.DiskControllerNVMe}}, want: "NVMe"},
+		{
+			name: "both",
+			v:    vm.VM{DiskControllers: []vm.DiskController{vm.DiskControllerSCSI, vm.DiskControllerNVMe}},
+			want: "SCSI, NVMe",
+		},
+	})
+}
+
 func TestQuotaText(t *testing.T) {
 	t.Parallel()
 	runCellCases(t, "quotaText", quotaText, []cellCase{
@@ -390,7 +422,7 @@ func headers(cols []output.Column[vm.VM]) []string {
 func TestVMColumns(t *testing.T) {
 	t.Parallel()
 
-	base := []string{"NAME", "VCPUS", "MEMORY", "GPUS", "ARCH", "CATEGORY", "ZONES", "FREEQUOTA", "HOURLY", "MONTHLY"}
+	base := []string{"NAME", "VCPUS", "MEMORY", "DISK", "GPUS", "ARCH", "CATEGORY", "ZONES", "FREEQUOTA", "HOURLY", "MONTHLY"}
 
 	if diff := cmp.Diff(base, headers(vmColumns(output.Styles{}, "GBP", false))); diff != "" {
 		t.Errorf("vmColumns(without Spot) headers mismatch (-want +got):\n%s", diff)
@@ -482,7 +514,7 @@ func TestWriteVMResult_empty(t *testing.T) {
 		t.Fatalf("writeVMResult() error = %v", err)
 	}
 
-	want := "\nNo VM SKUs in uksouth meet your requirements (900 checked).\nRequirements: vCPUs >= 512.\n"
+	want := "\nNo VM SKUs in uksouth meet your requirements (900 checked).\nFilters:\n - vCPUs >= 512\n"
 	if got := buf.String(); got != want {
 		t.Errorf("writeVMResult() wrote %q, want %q", got, want)
 	}

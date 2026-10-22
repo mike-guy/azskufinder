@@ -25,8 +25,8 @@ func newVMCmd(application *app.App) *cobra.Command {
 
 Candidate SKUs are filtered by the number of vCPUs (--cpus), the amount of
 memory in GiB (--memory), the number of GPUs (--gpus), the CPU architecture
-(--arch) and the category of VM (--category). Requirements you leave out are not
-applied. By default the numbers are minimums; with --exact-match they must
+(--arch), the category of VM (--category) and the disk controller
+(--disk-controller). Requirements you leave out are not applied. By default the numbers are minimums; with --exact-match they must
 match exactly. For SKUs with constrained cores, --cpus is the number of vCPUs
 the guest sees; quota is still counted against the larger number Azure bills.
 
@@ -44,6 +44,12 @@ specific to them.
 hpc, or several separated by commas. Azure does not publish a category for each
 SKU, so the category is worked out from the SKU's name (the D in Standard_D4s_v5 is
 general purpose).
+
+--disk-controller is any, scsi or nvme, and keeps the SKUs that support that disk
+controller. It matters because of the image: many newer sizes, such as most v6
+SKUs, support only NVMe, so an image without NVMe drivers will not boot on them,
+and an image that needs NVMe cannot be used on a size that supports only SCSI.
+SKUs that report no disk controller support SCSI only, as Azure documents.
 
 Each SKU is shown with an estimate of its pay-as-you-go price per hour and per
 month (--currency and --os choose which). With --include-spot, the Spot price
@@ -97,6 +103,7 @@ Everything is read live from Azure, so quota is always current.`,
 	f.BoolP("exact-match", "e", false, usage("exact-match", "make --cpus, --memory and --gpus exact values instead of minimums"))
 	f.StringP("arch", "a", "any", usage("arch", "CPU architecture: "+strings.Join(vm.ArchNames(), ", ")))
 	f.StringP("category", "C", "", usage("category", "kind of VM, comma separated: "+strings.Join(vm.CategoryNames(), ", ")))
+	f.String("disk-controller", "any", usage("disk-controller", "disk controller the VM must support, as the image may need: "+strings.Join(vm.DiskControllerNames(), ", ")))
 	f.String("os", defaultOS, usage("os", "operating system to price: linux or windows"))
 	f.BoolP("include-spot", "S", false, usage("include-spot", "also show Spot prices and eviction rates, and keep SKUs that only Spot quota allows"))
 	f.String("sort-by", string(vm.DefaultSortKey), usage("sort-by", "column to sort by, ascending unless followed by :desc, such as memory:desc; one of "+strings.Join(vm.SortKeyNames(), ", ")))
@@ -105,6 +112,7 @@ Everything is read live from Azure, so quota is always current.`,
 	registerFixed(cmd, "sort-by", sortCompletions(vm.SortKeyNames())...)
 	registerFixed(cmd, "arch", vm.ArchNames()...)
 	registerFixed(cmd, "category", vm.CategoryNames()...)
+	registerFixed(cmd, "disk-controller", vm.DiskControllerNames()...)
 
 	return cmd
 }
@@ -168,6 +176,10 @@ func readVMOptions(v *viper.Viper) (vmOptions, error) {
 
 	if o.Filter.Categories, err = vm.ParseCategories(v.GetString("category")); err != nil {
 		return o, usageErrorf("--category: %w", err)
+	}
+
+	if o.Filter.DiskController, err = vm.ParseDiskController(v.GetString("disk-controller")); err != nil {
+		return o, usageErrorf("--disk-controller: %w", err)
 	}
 
 	return o, nil

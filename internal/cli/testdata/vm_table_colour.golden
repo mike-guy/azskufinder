@@ -1,16 +1,18 @@
 
 [1m12 matching SKUs in uksouth[0m
-[32mShowing 4 of 7 deployable SKUs (vCPUs >= 2, memory >= 4 GiB)[0m
+[32mShowing 4 of 7 deployable SKUs with filters:[0m
+[32m - vCPUs >= 2[0m
+[32m - Memory >= 4 GiB[0m
 1 of them only as Spot (not enough on-demand quota)
 [33m2 restricted for this subscription[0m
 [33m3 without enough quota[0m
 
-[1mNAME[0m                         [1mVCPUS[0m  [1mMEMORY[0m  [1mGPUS[0m  [1mARCH[0m   [1mCATEGORY[0m         [1mZONES[0m  [1mFREEQUOTA[0m   [1mHOURLY[0m  [1mMONTHLY[0m     [1mSPOT[0m  [1mEVICTION[0m
-[2m───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
-[1mStandard_D4s_v5[0m                  4  16 GiB     -  x64    general-purpose  1,2,3         40  $0.1920  $140.16  $0.0384  0-5%
-[1mStandard_E8-4s_v5[0m     4 (8 billed)  64 GiB     -  x64    memory           -             24  $0.5040  $367.92  $0.1008  -
-[1mStandard_NC4as_T4_v3[0m             4  28 GiB     1  x64    gpu              2      Spot only  $0.5260  $383.98  $0.1052  5-10%
-[1mStandard_D2pls_v5[0m                2   4 GiB     -  arm64  general-purpose  -              0        -        -        -  n/a
+[1mNAME[0m                         [1mVCPUS[0m  [1mMEMORY[0m  [1mDISK[0m        [1mGPUS[0m  [1mARCH[0m   [1mCATEGORY[0m         [1mZONES[0m  [1mFREEQUOTA[0m   [1mHOURLY[0m  [1mMONTHLY[0m     [1mSPOT[0m  [1mEVICTION[0m
+[2m───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[1mStandard_D4s_v5[0m                  4  16 GiB  SCSI           -  x64    general-purpose  1,2,3         40  $0.1920  $140.16  $0.0384  0-5%
+[1mStandard_E8-4s_v5[0m     4 (8 billed)  64 GiB  SCSI, NVMe     -  x64    memory           -             24  $0.5040  $367.92  $0.1008  -
+[1mStandard_NC4as_T4_v3[0m             4  28 GiB  NVMe           1  x64    gpu              2      Spot only  $0.5260  $383.98  $0.1052  5-10%
+[1mStandard_D2pls_v5[0m                2   4 GiB  -              -  arm64  general-purpose  -              0        -        -        -  n/a
 
 [2mUse --limit 0 to show all 7.[0m
 [2mPrices: pay-as-you-go estimates in USD for Linux, at 730 hours a month; reservations, savings plans and discounts are not applied.[0m

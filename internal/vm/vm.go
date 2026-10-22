@@ -21,7 +21,13 @@ type VM struct {
 	Arch           Arch     `json:"architecture"` // x64, arm64 or unknown
 	Category       Category `json:"category"`     // the most specific category, or other
 	Zones          []string `json:"zones"`
-	SpotCapable    bool     `json:"spotCapable"`
+
+	// DiskControllers are the disk controllers the SKU supports, in a fixed
+	// order (scsi, then nvme). Never nil; empty when Azure reports only
+	// controllers this package does not know.
+	DiskControllers []DiskController `json:"diskControllers"`
+
+	SpotCapable bool `json:"spotCapable"`
 
 	// SpotOnly is true when there is not enough on-demand quota and the SKU was
 	// kept because it fits the regional Spot quota. Only set with IncludeSpot.

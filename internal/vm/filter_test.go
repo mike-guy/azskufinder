@@ -44,6 +44,41 @@ func TestParseArch(t *testing.T) {
 	})
 }
 
+func TestParseDiskController(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		in   string
+		want DiskController
+	}{
+		{in: "", want: ""},
+		{in: "any", want: ""},
+		{in: "ANY", want: ""},
+		{in: " scsi ", want: DiskControllerSCSI},
+		{in: "NVMe", want: DiskControllerNVMe},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.in, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := ParseDiskController(tc.in)
+			if err != nil || got != tc.want {
+				t.Errorf("ParseDiskController(%q) = %q, %v, want %q, nil", tc.in, got, err, tc.want)
+			}
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseDiskController("ide")
+		if err == nil || !strings.Contains(err.Error(), "any, scsi, nvme") {
+			t.Errorf("ParseDiskController(%q) error = %v, want one listing the controllers", "ide", err)
+		}
+	})
+}
+
 func TestParseCategories(t *testing.T) {
 	t.Parallel()
 
@@ -127,18 +162,21 @@ func TestFilter_LogValue(t *testing.T) {
 		{
 			name:   "zero",
 			filter: Filter{},
-			want:   []string{"f.cpus=any", "f.memory_gib=any", "f.gpus=any", "f.arch=any", "f.categories=any", "f.limit=0"},
+			want: []string{
+				"f.cpus=any", "f.memory_gib=any", "f.gpus=any", "f.arch=any", "f.categories=any",
+				"f.disk_controller=any", "f.limit=0",
+			},
 		},
 		{
 			name: "full",
 			filter: Filter{
 				CPUs: new(4), MemoryGiB: new(3.5), GPUs: new(1), ExactMatch: true,
-				Arch: ArchARM64, Categories: []Category{CategoryMemory, CategoryGPU}, OS: OSWindows,
-				IncludeSpot: true, Sort: Sort{Key: SortMemory, Desc: true}, Limit: 5,
+				Arch: ArchARM64, Categories: []Category{CategoryMemory, CategoryGPU}, DiskController: DiskControllerNVMe,
+				OS: OSWindows, IncludeSpot: true, Sort: Sort{Key: SortMemory, Desc: true}, Limit: 5,
 			},
 			want: []string{
 				"f.cpus=4", "f.memory_gib=3.5", "f.gpus=1", "f.exact_match=true", "f.arch=arm64",
-				"f.categories=memory,gpu", "f.os=windows", "f.include_spot=true", "f.sort=memory:desc", "f.limit=5",
+				"f.categories=memory,gpu", "f.disk_controller=nvme", "f.os=windows", "f.include_spot=true", "f.sort=memory:desc", "f.limit=5",
 			},
 		},
 	}
@@ -169,7 +207,8 @@ func TestParseVM(t *testing.T) {
 			Name: "Standard_D4s_v5", Family: "standardDSv5Family",
 			VCPUs: 4, VCPUsAvailable: 4, MemoryGiB: 16, Arch: ArchX64,
 			Category: CategoryGeneral, Zones: []string{}, Quota: []QuotaHeadroom{},
-			categories: []Category{CategoryGeneral},
+			DiskControllers: []DiskController{DiskControllerSCSI},
+			categories:      []Category{CategoryGeneral},
 		}
 		if change != nil {
 			change(&v)
@@ -193,7 +232,8 @@ func TestParseVM(t *testing.T) {
 				Name: "Standard_E8-4s_v5", Family: "standardESv5Family",
 				VCPUs: 8, VCPUsAvailable: 4, MemoryGiB: 64, Arch: ArchX64,
 				Category: CategoryMemory, Zones: []string{}, Quota: []QuotaHeadroom{},
-				categories: []Category{CategoryMemory},
+				DiskControllers: []DiskController{DiskControllerSCSI},
+				categories:      []Category{CategoryMemory},
 			},
 		},
 		{name: "zero GPUs allowed", sku: d4(withGPUs(0)), want: base(nil)},
@@ -202,13 +242,40 @@ func TestParseVM(t *testing.T) {
 		{name: "arch not known", sku: d4(withCap("CpuArchitectureType", "Power")), want: base(func(v *VM) { v.Arch = archUnknown })},
 		{name: "spot capable", sku: d4(withCap("LowPriorityCapable", "True")), want: base(func(v *VM) { v.SpotCapable = true })},
 		{name: "not spot capable", sku: d4(withCap("LowPriorityCapable", "false")), want: base(nil)},
+		{name: "SCSI only", sku: d4(withDiskControllers("SCSI")), want: base(nil)},
+		{
+			name: "NVMe only",
+			sku:  d4(withDiskControllers("NVMe")),
+			want: base(func(v *VM) { v.DiskControllers = []DiskController{DiskControllerNVMe} }),
+		},
+		{
+			name: "both",
+			sku:  d4(withDiskControllers("SCSI,NVMe")),
+			want: base(func(v *VM) { v.DiskControllers = []DiskController{DiskControllerSCSI, DiskControllerNVMe} }),
+		},
+		{
+			name: "both in the other order, spaced and in lower case",
+			sku:  d4(withDiskControllers("nvme, scsi")),
+			want: base(func(v *VM) { v.DiskControllers = []DiskController{DiskControllerSCSI, DiskControllerNVMe} }),
+		},
+		{
+			name: "unknown controller dropped",
+			sku:  d4(withDiskControllers("NVMe,IDE")),
+			want: base(func(v *VM) { v.DiskControllers = []DiskController{DiskControllerNVMe} }),
+		},
+		{
+			name: "no known controller",
+			sku:  d4(withDiskControllers("IDE")),
+			want: base(func(v *VM) { v.DiskControllers = []DiskController{} }),
+		},
 		{
 			name: "burstable",
 			sku:  skuOf("Standard_B2s", "standardBSFamily", 2, 4),
 			want: VM{
 				Name: "Standard_B2s", Family: "standardBSFamily", VCPUs: 2, VCPUsAvailable: 2, MemoryGiB: 4,
 				Arch: ArchX64, Category: CategoryBurst, Zones: []string{}, Quota: []QuotaHeadroom{},
-				categories: []Category{CategoryGeneral, CategoryBurst},
+				DiskControllers: []DiskController{DiskControllerSCSI},
+				categories:      []Category{CategoryGeneral, CategoryBurst},
 			},
 		},
 		{
@@ -217,7 +284,8 @@ func TestParseVM(t *testing.T) {
 			want: VM{
 				Name: "Standard_NC6s_v3", Family: "standardNCSv3Family", VCPUs: 6, VCPUsAvailable: 6, MemoryGiB: 112,
 				GPUs: 1, Arch: ArchX64, Category: CategoryGPU, Zones: []string{}, Quota: []QuotaHeadroom{},
-				categories: []Category{CategoryGPU},
+				DiskControllers: []DiskController{DiskControllerSCSI},
+				categories:      []Category{CategoryGPU},
 			},
 		},
 		{
@@ -235,6 +303,7 @@ func TestParseVM(t *testing.T) {
 			want: VM{
 				Name: "Standard_PB6s", Family: "standardPBSFamily", VCPUs: 6, VCPUsAvailable: 6, MemoryGiB: 112,
 				Arch: ArchX64, Category: categoryOther, Zones: []string{}, Quota: []QuotaHeadroom{},
+				DiskControllers: []DiskController{DiskControllerSCSI},
 			},
 		},
 		{
@@ -244,6 +313,7 @@ func TestParseVM(t *testing.T) {
 			want: VM{
 				Name: "standard_d2", VCPUs: 2, VCPUsAvailable: 2, MemoryGiB: 8,
 				Arch: ArchX64, Category: categoryOther, Zones: []string{}, Quota: []QuotaHeadroom{},
+				DiskControllers: []DiskController{DiskControllerSCSI},
 			},
 		},
 	}
@@ -303,6 +373,10 @@ func TestMatches(t *testing.T) {
 	nc := vmOf(t, skuOf("Standard_NC6s_v3", "standardNCSv3Family", 6, 112, withGPUs(1)))
 	arm := vmOf(t, skuOf("Standard_D4ps_v5", "standardDPSv5Family", 4, 16, withCap("CpuArchitectureType", "Arm64")))
 	unknown := vmOf(t, skuOf("Standard_D4x", "", 4, 16, withCap("CpuArchitectureType", "")))
+	scsi := vmOf(t, skuOf("Standard_D4s_v4", "standardDSv4Family", 4, 16, withDiskControllers("SCSI")))
+	nvme := vmOf(t, skuOf("Standard_D4s_v6", "standardDSv6Family", 4, 16, withDiskControllers("NVMe")))
+	both := vmOf(t, skuOf("Standard_E4bs_v5", "standardEBSv5Family", 4, 32, withDiskControllers("SCSI,NVMe")))
+	none := vmOf(t, skuOf("Standard_D4y", "", 4, 16, withDiskControllers("IDE")))
 
 	tests := []struct {
 		name   string
@@ -320,6 +394,16 @@ func TestMatches(t *testing.T) {
 		{name: "burstable matches B", vm: b2, filter: Filter{Categories: []Category{CategoryBurst}}, want: true},
 		{name: "burstable excludes D", vm: d4, filter: Filter{Categories: []Category{CategoryBurst}}, want: false},
 		{name: "general includes B", vm: b2, filter: Filter{Categories: []Category{CategoryGeneral}}, want: true},
+		{name: "nvme matches NVMe only", vm: nvme, filter: Filter{DiskController: DiskControllerNVMe}, want: true},
+		{name: "nvme matches both", vm: both, filter: Filter{DiskController: DiskControllerNVMe}, want: true},
+		{name: "nvme excludes SCSI only", vm: scsi, filter: Filter{DiskController: DiskControllerNVMe}, want: false},
+		{name: "nvme excludes unreported", vm: d4, filter: Filter{DiskController: DiskControllerNVMe}, want: false},
+		{name: "scsi matches SCSI only", vm: scsi, filter: Filter{DiskController: DiskControllerSCSI}, want: true},
+		{name: "scsi matches both", vm: both, filter: Filter{DiskController: DiskControllerSCSI}, want: true},
+		{name: "scsi matches unreported", vm: d4, filter: Filter{DiskController: DiskControllerSCSI}, want: true},
+		{name: "scsi excludes NVMe only", vm: nvme, filter: Filter{DiskController: DiskControllerSCSI}, want: false},
+		{name: "no known controller never matches", vm: none, filter: Filter{DiskController: DiskControllerSCSI}, want: false},
+		{name: "no known controller kept without the filter", vm: none, filter: Filter{}, want: true},
 		{name: "minimum CPUs met", vm: d4, filter: Filter{CPUs: new(2)}, want: true},
 		{name: "minimum CPUs not met", vm: d4, filter: Filter{CPUs: new(8)}, want: false},
 		{name: "CPUs are those available", vm: e84, filter: Filter{CPUs: new(8)}, want: false},
