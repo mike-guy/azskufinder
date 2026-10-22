@@ -15,12 +15,17 @@ type VM struct {
 
 	// VCPUsAvailable is the vCPU count the guest sees. It is lower than VCPUs for
 	// constrained-core SKUs such as Standard_E8-4s_v5.
-	VCPUsAvailable int      `json:"vcpusAvailable"`
-	MemoryGiB      float64  `json:"memoryGiB"`
-	GPUs           int      `json:"gpus"`
-	Arch           Arch     `json:"architecture"` // x64, arm64 or unknown
-	Category       Category `json:"category"`     // the most specific category, or other
-	Zones          []string `json:"zones"`
+	VCPUsAvailable int     `json:"vcpusAvailable"`
+	MemoryGiB      float64 `json:"memoryGiB"`
+	GPUs           int     `json:"gpus"`
+
+	// MaxNICs is the most network interfaces the SKU can take, or nil when
+	// Azure did not say.
+	MaxNICs *int `json:"maxNetworkInterfaces"`
+
+	Arch     Arch     `json:"architecture"` // x64, arm64 or unknown
+	Category Category `json:"category"`     // the most specific category, or other
+	Zones    []string `json:"zones"`
 
 	// DiskControllers are the disk controllers the SKU supports, in a fixed
 	// order (scsi, then nvme). Never nil; empty when Azure reports only

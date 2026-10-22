@@ -41,7 +41,9 @@ func TestDescribeFilter(t *testing.T) {
 	}{
 		{name: "nothing set", f: vm.Filter{}, want: []criterion{}},
 		{name: "minimum", f: vm.Filter{CPUs: new(4)}, want: []criterion{{"vCPUs", ">= 4"}}},
-		{name: "minimum of zero is left out", f: vm.Filter{CPUs: new(0), GPUs: new(0), MemoryGiB: new(0.0)}, want: []criterion{}},
+		{name: "minimum of zero is left out", f: vm.Filter{CPUs: new(0), GPUs: new(0), NICs: new(0), MemoryGiB: new(0.0)}, want: []criterion{}},
+		{name: "minimum NICs", f: vm.Filter{NICs: new(3)}, want: []criterion{{"NICs", ">= 3"}}},
+		{name: "exact NICs", f: vm.Filter{NICs: new(4), ExactMatch: true}, want: []criterion{{"NICs", "= 4"}}},
 		{name: "exact zero", f: vm.Filter{CPUs: new(0), ExactMatch: true}, want: []criterion{{"vCPUs", "= 0"}}},
 		{name: "exact no GPUs", f: vm.Filter{GPUs: new(0), ExactMatch: true}, want: []criterion{{"GPUs", "= 0"}}},
 		{name: "whole memory", f: vm.Filter{MemoryGiB: new(16.0)}, want: []criterion{{"memory", ">= 16 GiB"}}},
@@ -57,12 +59,13 @@ func TestDescribeFilter(t *testing.T) {
 			name: "everything, in order",
 			f: vm.Filter{
 				DiskController: vm.DiskControllerSCSI, Categories: []vm.Category{vm.CategoryCompute}, Arch: vm.ArchX64,
-				GPUs: new(1), MemoryGiB: new(8.0), CPUs: new(2), ExactMatch: true,
+				NICs: new(2), GPUs: new(1), MemoryGiB: new(8.0), CPUs: new(2), ExactMatch: true,
 			},
 			want: []criterion{
 				{"vCPUs", "= 2"},
 				{"memory", "= 8 GiB"},
 				{"GPUs", "= 1"},
+				{"NICs", "= 2"},
 				{"architecture", "x64"},
 				{"category", "compute"},
 				{"disk controller", "scsi"},
@@ -98,13 +101,14 @@ func TestRequirementLines(t *testing.T) {
 		{
 			name: "every kind",
 			f: vm.Filter{
-				CPUs: new(2), MemoryGiB: new(4.0), GPUs: new(1), Arch: vm.ArchX64,
+				CPUs: new(2), MemoryGiB: new(4.0), GPUs: new(1), NICs: new(3), Arch: vm.ArchX64,
 				Categories: []vm.Category{vm.CategoryGeneral}, DiskController: vm.DiskControllerNVMe,
 			},
 			want: []string{
 				" - vCPUs >= 2",
 				" - Memory >= 4 GiB",
 				" - GPUs >= 1",
+				" - NICs >= 3",
 				" - Architecture x64",
 				" - Category general-purpose",
 				" - Disk Controller nvme",
@@ -369,6 +373,14 @@ func TestVCPUText(t *testing.T) {
 	})
 }
 
+func TestNICText(t *testing.T) {
+	t.Parallel()
+	runCellCases(t, "nicText", nicText, []cellCase{
+		{name: "unknown", v: vm.VM{}, want: output.NoValue},
+		{name: "eight", v: vm.VM{MaxNICs: new(8)}, want: "8"},
+	})
+}
+
 func TestGPUText(t *testing.T) {
 	t.Parallel()
 	runCellCases(t, "gpuText", gpuText, []cellCase{
@@ -422,7 +434,7 @@ func headers(cols []output.Column[vm.VM]) []string {
 func TestVMColumns(t *testing.T) {
 	t.Parallel()
 
-	base := []string{"NAME", "VCPUS", "MEMORY", "DISK", "GPUS", "ARCH", "CATEGORY", "ZONES", "FREEQUOTA", "HOURLY", "MONTHLY"}
+	base := []string{"NAME", "VCPUS", "MEMORY", "DISK", "NICS", "GPUS", "ARCH", "CATEGORY", "ZONES", "FREEQUOTA", "HOURLY", "MONTHLY"}
 
 	if diff := cmp.Diff(base, headers(vmColumns(output.Styles{}, "GBP", false))); diff != "" {
 		t.Errorf("vmColumns(without Spot) headers mismatch (-want +got):\n%s", diff)

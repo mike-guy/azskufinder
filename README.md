@@ -68,8 +68,9 @@ $ azskufinder vm -l uksouth --cpus 4 --memory 16
 
 ## Features
 
-- Filter by vCPUs, memory, GPUs, CPU architecture (x64 or Arm), VM category and
-  disk controller (SCSI or NVMe), with sizes as minimums or exact values
+- Filter by vCPUs, memory, GPUs, network interfaces, CPU architecture (x64 or
+  Arm), VM category and disk controller (SCSI or NVMe), with numbers as minimums
+  or exact values
 - Live SKU restrictions, zone restrictions and family and regional vCPU quota
 - Pay-as-you-go prices in GBP, USD or EUR, for Linux or Windows
 - Spot prices, 28-day eviction rates and Spot-only results
@@ -106,12 +107,12 @@ Showing 4 of 7 deployable SKUs with filters:
 2 restricted for this subscription
 3 without enough quota
 
-NAME                         VCPUS  MEMORY  DISK        GPUS  ARCH   CATEGORY         ZONES  FREEQUOTA   HOURLY  MONTHLY
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Standard_D4s_v5                  4  16 GiB  SCSI           -  x64    general-purpose  1,2,3         40  £0.1920  £140.16
-Standard_E8-4s_v5     4 (8 billed)  64 GiB  SCSI, NVMe     -  x64    memory           -             24  £0.5040  £367.92
-Standard_NC4as_T4_v3             4  28 GiB  NVMe           1  x64    gpu              2      Spot only  £0.5260  £383.98
-Standard_D2pls_v5                2   4 GiB  -              -  arm64  general-purpose  -              0        -        -
+NAME                         VCPUS  MEMORY  DISK        NICS  GPUS  ARCH   CATEGORY         ZONES  FREEQUOTA   HOURLY  MONTHLY
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Standard_D4s_v5                  4  16 GiB  SCSI           2     -  x64    general-purpose  1,2,3         40  £0.1920  £140.16
+Standard_E8-4s_v5     4 (8 billed)  64 GiB  SCSI, NVMe     4     -  x64    memory           -             24  £0.5040  £367.92
+Standard_NC4as_T4_v3             4  28 GiB  NVMe           8     1  x64    gpu              2      Spot only  £0.5260  £383.98
+Standard_D2pls_v5                2   4 GiB  -              -     -  arm64  general-purpose  -              0        -        -
 
 Use --limit 0 to show all 7.
 Prices: pay-as-you-go estimates in GBP for Linux, at 730 hours a month; reservations, savings plans and discounts are not applied.
@@ -296,10 +297,17 @@ azskufinder vm -l uksouth --cpus 4 --memory 16
 ```
 
 Exactly 8 vCPUs, rather than at least 8. `--exact-match` applies to `--cpus`,
-`--memory` and `--gpus` together:
+`--memory`, `--gpus` and `--nics` together:
 
 ```sh
 azskufinder vm -l uksouth --cpus 8 --exact-match
+```
+
+Sizes that can take at least 3 network interfaces (NICs). Azure caps the number
+each size can take, and small sizes often allow only 2:
+
+```sh
+azskufinder vm -l uksouth --cpus 4 --nics 3
 ```
 
 ### Find by kind of VM
@@ -382,12 +390,12 @@ Showing 4 of 7 deployable SKUs with filters:
 2 restricted for this subscription
 3 without enough quota
 
-NAME                         VCPUS  MEMORY  DISK        GPUS  ARCH   CATEGORY         ZONES  FREEQUOTA   HOURLY  MONTHLY     SPOT  EVICTION
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Standard_D4s_v5                  4  16 GiB  SCSI           -  x64    general-purpose  1,2,3         40  $0.1920  $140.16  $0.0384  0-5%
-Standard_E8-4s_v5     4 (8 billed)  64 GiB  SCSI, NVMe     -  x64    memory           -             24  $0.5040  $367.92  $0.1008  -
-Standard_NC4as_T4_v3             4  28 GiB  NVMe           1  x64    gpu              2      Spot only  $0.5260  $383.98  $0.1052  5-10%
-Standard_D2pls_v5                2   4 GiB  -              -  arm64  general-purpose  -              0        -        -        -  n/a
+NAME                         VCPUS  MEMORY  DISK        NICS  GPUS  ARCH   CATEGORY         ZONES  FREEQUOTA   HOURLY  MONTHLY     SPOT  EVICTION
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Standard_D4s_v5                  4  16 GiB  SCSI           2     -  x64    general-purpose  1,2,3         40  $0.1920  $140.16  $0.0384  0-5%
+Standard_E8-4s_v5     4 (8 billed)  64 GiB  SCSI, NVMe     4     -  x64    memory           -             24  $0.5040  $367.92  $0.1008  -
+Standard_NC4as_T4_v3             4  28 GiB  NVMe           8     1  x64    gpu              2      Spot only  $0.5260  $383.98  $0.1052  5-10%
+Standard_D2pls_v5                2   4 GiB  -              -     -  arm64  general-purpose  -              0        -        -        -  n/a
 
 Use --limit 0 to show all 7.
 Prices: pay-as-you-go estimates in USD for Linux, at 730 hours a month; reservations, savings plans and discounts are not applied.
@@ -484,9 +492,9 @@ Showing 4 of 7 deployable SKUs with filters:                      ← how many a
 2 restricted for this subscription                                ← left out: restricted by Azure
 3 without enough quota                                            ← left out: not enough vCPU quota
 
-NAME                         VCPUS  MEMORY  DISK        GPUS  ARCH   CATEGORY         ZONES  FREEQUOTA   HOURLY  MONTHLY
-Standard_D4s_v5                  4  16 GiB  SCSI           -  x64    general-purpose  1,2,3         40  £0.1920  £140.16
-Standard_E8-4s_v5     4 (8 billed)  64 GiB  SCSI, NVMe     -  x64    memory           -             24  £0.5040  £367.92
+NAME                         VCPUS  MEMORY  DISK        NICS  GPUS  ARCH   CATEGORY         ZONES  FREEQUOTA   HOURLY  MONTHLY
+Standard_D4s_v5                  4  16 GiB  SCSI           2     -  x64    general-purpose  1,2,3         40  £0.1920  £140.16
+Standard_E8-4s_v5     4 (8 billed)  64 GiB  SCSI, NVMe     4     -  x64    memory           -             24  £0.5040  £367.92
 ```
 
 | Column | Meaning |
@@ -495,6 +503,7 @@ Standard_E8-4s_v5     4 (8 billed)  64 GiB  SCSI, NVMe     -  x64    memory     
 | `VCPUS` | vCPUs the VM gets. For [constrained-core](https://learn.microsoft.com/azure/virtual-machines/constrained-vcpu) SKUs, such as `Standard_E8-4s_v5`, the vCPUs you're billed for, and that count against quota, are shown in brackets |
 | `MEMORY` | Memory in GiB |
 | `DISK` | Disk controllers the SKU supports: `SCSI`, `NVMe` or `SCSI, NVMe`. `-` if Azure reports only controllers azskufinder doesn't know |
+| `NICS` | The most network interfaces the SKU can take; `-` if Azure didn't say |
 | `GPUS` | Number of GPUs, `-` for none |
 | `ARCH` | `x64` or `arm64` |
 | `CATEGORY` | The kind of VM, worked out from the name (see [Categories](#categories)) |
@@ -596,6 +605,7 @@ scripts written against `azskufinder/v1` keep working.
       "vcpusAvailable": 4,
       "memoryGiB": 16,
       "gpus": 0,
+      "maxNetworkInterfaces": 2,
       "architecture": "x64",
       "category": "general-purpose",
       "zones": ["1", "2", "3"],
@@ -617,7 +627,8 @@ scripts written against `azskufinder/v1` keep working.
 `vcpusAvailable` is the number the VM gets. They differ only for
 constrained-core SKUs. `diskControllers` lists `scsi`, `nvme` or both, and is
 `[]` if Azure reports only controllers azskufinder doesn't know. A price with no
-retail value is `null`, and so is an `evictionRate` Azure has no rate for.
+retail value is `null`, and so is a `maxNetworkInterfaces` or `evictionRate`
+Azure didn't report.
 
 </details>
 
@@ -653,7 +664,8 @@ redirecting one doesn't change the other.
 | `--cpus` | `-c` | | Number of vCPUs: a minimum, or exact with `--exact-match` |
 | `--memory` | `-m` | | Memory in GiB: a minimum, or exact with `--exact-match` |
 | `--gpus` | `-g` | | Number of GPUs: a minimum, or exact with `--exact-match` |
-| `--exact-match` | `-e` | | Make `--cpus`, `--memory` and `--gpus` exact values |
+| `--nics` | | | Network interfaces the VM must take: a minimum, or exact with `--exact-match` |
+| `--exact-match` | `-e` | | Make `--cpus`, `--memory`, `--gpus` and `--nics` exact values |
 | `--arch` | `-a` | `any` | CPU architecture: `any`, `x64` or `arm64` |
 | `--category` | `-C` | | Kinds of VM, comma separated (see below) |
 | `--disk-controller` | | `any` | Disk controller the VM must support: `any`, `scsi` or `nvme` |
@@ -680,8 +692,8 @@ matched only when no `--category` is given.
 
 ### Sort columns
 
-`name`, `vcpus`, `memory`, `gpus`, `arch`, `category`, `freequota`, `hourly`,
-`monthly`, `spot` and `eviction`. Add `:desc` to sort in descending order. SKUs
+`name`, `vcpus`, `memory`, `nics`, `gpus`, `arch`, `category`, `freequota`,
+`hourly`, `monthly`, `spot` and `eviction`. Add `:desc` to sort in descending order. SKUs
 with no value for the column always come last, and so do `Spot only` SKUs when
 sorting by `freequota`. `spot` and `eviction` need `--include-spot`.
 

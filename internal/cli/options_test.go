@@ -231,11 +231,12 @@ func TestReadVMOptions(t *testing.T) {
 		},
 		{
 			name: "exact requirements",
-			set:  with(validVM(), map[string]any{"cpus": 4, "memory": "16", "gpus": 0, "exact-match": true}),
+			set:  with(validVM(), map[string]any{"cpus": 4, "memory": "16", "gpus": 0, "nics": 2, "exact-match": true}),
 			want: func(o *vmOptions) {
 				o.Filter.CPUs = new(4)
 				o.Filter.MemoryGiB = new(16.0)
 				o.Filter.GPUs = new(0)
+				o.Filter.NICs = new(2)
 				o.Filter.ExactMatch = true
 			},
 		},
@@ -399,6 +400,16 @@ func TestReadVMOptions_errors(t *testing.T) {
 			name:    "bad memory",
 			set:     with(validVM(), map[string]any{"memory": "lots"}),
 			wantMsg: `--memory must be a number of at least 0, got "lots"`,
+		},
+		{
+			name:    "bad nics",
+			set:     with(validVM(), map[string]any{"nics": "three"}),
+			wantMsg: `--nics must be a whole number, got "three"`,
+		},
+		{
+			name:    "negative nics",
+			set:     with(validVM(), map[string]any{"nics": "-1"}),
+			wantMsg: "--nics must not be negative, got -1",
 		},
 		{
 			name:    "bad gpus",

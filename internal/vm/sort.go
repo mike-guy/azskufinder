@@ -19,6 +19,7 @@ const (
 	SortName     SortKey = "name"
 	SortVCPUs    SortKey = "vcpus"
 	SortMemory   SortKey = "memory"
+	SortNICs     SortKey = "nics"
 	SortGPUs     SortKey = "gpus"
 	SortArch     SortKey = "arch"
 	SortCategory SortKey = "category"
@@ -51,6 +52,13 @@ var sortColumns = []sortColumn{
 	{key: SortName, text: func(v VM) (string, bool) { return v.Name, true }},
 	{key: SortVCPUs, number: func(v VM) (float64, bool) { return float64(v.VCPUsAvailable), true }},
 	{key: SortMemory, number: func(v VM) (float64, bool) { return v.MemoryGiB, true }},
+	{key: SortNICs, number: func(v VM) (float64, bool) {
+		if v.MaxNICs == nil {
+			return 0, false
+		}
+
+		return float64(*v.MaxNICs), true
+	}},
 	{key: SortGPUs, number: func(v VM) (float64, bool) { return float64(v.GPUs), true }},
 	{key: SortArch, text: func(v VM) (string, bool) { return string(v.Arch), v.Arch != archUnknown }},
 	{key: SortCategory, text: func(v VM) (string, bool) { return string(v.Category), v.Category != categoryOther }},

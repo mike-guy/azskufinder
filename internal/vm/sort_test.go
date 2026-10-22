@@ -104,7 +104,7 @@ func TestSortKeyNames(t *testing.T) {
 	t.Parallel()
 
 	// The table headers in order, which the help text lists.
-	want := []string{"name", "vcpus", "memory", "gpus", "arch", "category", "freequota", "hourly", "monthly", "spot", "eviction"}
+	want := []string{"name", "vcpus", "memory", "nics", "gpus", "arch", "category", "freequota", "hourly", "monthly", "spot", "eviction"}
 
 	if diff := cmp.Diff(want, SortKeyNames()); diff != "" {
 		t.Errorf("SortKeyNames() mismatch (-want +got):\n%s", diff)
@@ -210,6 +210,18 @@ func TestSortVMs(t *testing.T) {
 			sort: Sort{Key: SortMemory},
 			vms:  []VM{sized("big", 0, 64, 0), sized("small", 0, 3.5, 0)},
 			want: []string{"small", "big"},
+		},
+		{
+			name: "nics, unknown last",
+			sort: Sort{Key: SortNICs},
+			vms:  []VM{{Name: "unknown"}, {Name: "eight", MaxNICs: new(8)}, {Name: "two", MaxNICs: new(2)}},
+			want: []string{"two", "eight", "unknown"},
+		},
+		{
+			name: "nics descending, unknown still last",
+			sort: Sort{Key: SortNICs, Desc: true},
+			vms:  []VM{{Name: "unknown"}, {Name: "two", MaxNICs: new(2)}, {Name: "eight", MaxNICs: new(8)}},
+			want: []string{"eight", "two", "unknown"},
 		},
 		{
 			name: "gpus descending",
