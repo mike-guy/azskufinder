@@ -1,0 +1,68 @@
+name: Bug report
+description: Something azskufinder does wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Please don't include
+        subscription IDs, tenant IDs or credentials. Replace them with
+        `00000000-0000-0000-0000-000000000000`.
+
+        To report a security vulnerability, please use
+        [private vulnerability reporting](https://github.com/mike-guy/azskufinder/security/advisories/new)
+        instead of an issue.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `azskufinder --version`
+      placeholder: azskufinder version 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Homebrew
+        - Scoop
+        - go install
+        - Downloaded a release archive
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The full command you ran
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: |
+        Include the output. Running the command again with `--debug` adds
+        detail on standard error that often helps.
+      render: text
+    validations:
+      required: true

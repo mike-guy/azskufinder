@@ -1,0 +1,22 @@
+{
+  "apiVersion": "azskufinder/v1",
+  "kind": "vm",
+  "criteria": [],
+  "pricing": {
+    "currency": "GBP",
+    "os": "linux",
+    "hoursPerMonth": 730
+  },
+  "location": "uksouth",
+  "summary": {
+    "considered": 900,
+    "matched": 0,
+    "restricted": 0,
+    "noQuota": 0,
+    "eligible": 0,
+    "spotOnly": 0,
+    "shown": 0
+  },
+  "results": [],
+  "warnings": []
+}

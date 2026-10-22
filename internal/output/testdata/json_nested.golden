@@ -1,0 +1,11 @@
+{
+  "name": "Standard_D2s_v5",
+  "zones": [
+    "1",
+    "2"
+  ],
+  "price": {
+    "currency": "GBP",
+    "hourly": null
+  }
+}

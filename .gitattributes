@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+# Golden files are compared byte for byte, so git must never convert their
+# line endings (for example on a Windows checkout).
+*.golden -text

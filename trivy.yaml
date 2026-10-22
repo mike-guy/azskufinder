@@ -1,0 +1,15 @@
+# Settings for 'trivy fs .' (make trivy, and the security workflow).
+scan:
+  scanners:
+    - vuln
+    - secret
+    - license
+  skip-dirs:
+    - bin
+    - dist
+severity:
+  - HIGH
+  - CRITICAL
+exit-code: 1
+vulnerability:
+  ignore-unfixed: true

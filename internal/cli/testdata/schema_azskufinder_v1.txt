@@ -1,0 +1,54 @@
+apiVersion string
+criteria array
+criteria[] object
+criteria[].name string
+criteria[].value string
+kind string
+location string
+pricing object
+pricing.currency string
+pricing.hoursPerMonth number
+pricing.os string
+results array
+results[] object
+results[].architecture string
+results[].category string
+results[].family string
+results[].gpus number
+results[].memoryGiB number
+results[].name string
+results[].pricing object
+results[].pricing.onDemandHourly number nullable
+results[].pricing.onDemandMonthly number nullable
+results[].quota array
+results[].quota[] object
+results[].quota[].free number
+results[].quota[].limit number
+results[].quota[].name string
+results[].quota[].used number
+results[].spot object optional
+results[].spot.evictionRate string nullable
+results[].spot.hourlyPrice number nullable
+results[].spotCapable boolean
+results[].spotOnly boolean
+results[].vcpus number
+results[].vcpusAvailable number
+results[].zones array
+results[].zones[] string
+spotQuota object optional
+spotQuota.free number
+spotQuota.limit number
+spotQuota.name string
+spotQuota.used number
+summary object
+summary.considered number
+summary.eligible number
+summary.matched number
+summary.noQuota number
+summary.restricted number
+summary.shown number
+summary.spotOnly number
+warnings array
+warnings[] object
+warnings[].code string
+warnings[].message string

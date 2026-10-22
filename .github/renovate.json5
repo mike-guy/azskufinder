@@ -1,0 +1,69 @@
+// Renovate keeps every pinned version up to date: Go modules and the Go
+// toolchain (go.mod), development tools (mise.toml and mise.lock), GitHub
+// Actions, pre-commit hooks, and mise's own version in the workflows. It runs
+// weekly from .github/workflows/renovate.yml. See CONTRIBUTING.md.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:best-practices",
+    ":enablePreCommit",
+    // MISE_VERSION lines in workflows, under a '# renovate:' comment.
+    "customManagers:githubActionsVersions",
+  ],
+  dependencyDashboard: true,
+  labels: ["dependencies"],
+
+  // Nothing merges by itself: every update waits for a person.
+  automerge: false,
+
+  // Run 'go mod tidy' after each Go module update.
+  postUpdateOptions: ["gomodTidy"],
+
+  // Conventional commits. chore(deps) doesn't call for a release; fix(deps)
+  // (below) makes the next release at least a patch.
+  semanticCommits: "enabled",
+  semanticCommitType: "chore",
+  semanticCommitScope: "deps",
+
+  // Security fixes are raised straight away, whatever the grouping.
+  vulnerabilityAlerts: {
+    labels: ["dependencies", "security"],
+  },
+  osvVulnerabilityAlerts: true,
+
+  packageRules: [
+    {
+      description: "Go modules and the Go toolchain are compiled into the binary, so an update calls for a patch release",
+      matchManagers: ["gomod"],
+      semanticCommitType: "fix",
+    },
+    {
+      description: "One pull request per kind of dependency for minor and patch updates; majors stay separate",
+      matchManagers: ["gomod"],
+      matchUpdateTypes: ["minor", "patch", "digest"],
+      groupName: "Go modules",
+    },
+    {
+      matchManagers: ["mise"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "development tools",
+    },
+    {
+      description: "mise itself goes with the tools it installs",
+      matchManagers: ["custom.regex"],
+      matchDepNames: ["jdx/mise"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "development tools",
+    },
+    {
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["minor", "patch", "digest", "pinDigest"],
+      groupName: "GitHub Actions",
+    },
+    {
+      matchManagers: ["pre-commit"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "pre-commit hooks",
+    },
+  ],
+}

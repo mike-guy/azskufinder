@@ -1,0 +1,99 @@
+# Git hooks, installed with 'pre-commit install'. Third-party hooks are pinned
+# and installed by pre-commit itself. The project hooks call make targets, so
+# they run exactly what CI runs. Skip one with SKIP=<id> git commit ...
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Golden files hold exact expected output, so they're never rewritten.
+      - id: trailing-whitespace
+        # Two trailing spaces are a line break in Markdown, so keep those.
+        args: [--markdown-linebreak-ext=md]
+        exclude: \.golden$
+      - id: end-of-file-fixer
+        exclude: \.golden$
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: \.golden$
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        # README screenshots are kept at full resolution.
+        exclude: ^docs/images/
+      - id: check-case-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: 44.176.2
+    hooks:
+      - id: renovate-config-validator
+        # Fail on deprecated options too, not just invalid ones.
+        args: [--strict]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        # Keep in step with the commits job in .github/workflows/pr.yml.
+        args: [build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test]
+
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: go fmt
+        entry: make fmt
+        language: system
+        pass_filenames: false
+        files: \.go$
+      - id: go-tidy
+        name: go mod tidy
+        entry: make tidy-check
+        language: system
+        pass_filenames: false
+        files: (^|/)go\.(mod|sum)$
+      - id: go-build
+        name: go build
+        entry: make build-check
+        language: system
+        pass_filenames: false
+        files: \.go$|(^|/)go\.(mod|sum)$
+      - id: go-lint
+        name: golangci-lint
+        entry: make lint
+        language: system
+        pass_filenames: false
+        files: \.go$|^\.golangci\.yml$
+      - id: go-test
+        name: go test
+        entry: make test-short
+        language: system
+        pass_filenames: false
+        files: \.go$|(^|/)go\.(mod|sum)$|/testdata/
+      - id: actions-lint
+        name: actionlint and zizmor
+        entry: make actions-lint
+        language: system
+        pass_filenames: false
+        files: ^\.github/workflows/
+      - id: release-check
+        name: goreleaser check
+        entry: make release-check
+        language: system
+        pass_filenames: false
+        files: ^\.goreleaser\.yaml$
+      - id: go-vuln
+        name: govulncheck
+        entry: make vuln
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

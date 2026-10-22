@@ -1,0 +1,17 @@
+
+12 matching SKUs in uksouth
+Showing 4 of 7 deployable SKUs (vCPUs >= 2, memory >= 4 GiB)
+1 of them only as Spot (not enough on-demand quota)
+2 restricted for this subscription
+3 without enough quota
+
+NAME                         VCPUS  MEMORY  GPUS  ARCH   CATEGORY         ZONES  FREEQUOTA   HOURLY  MONTHLY
+────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Standard_D4s_v5                  4  16 GiB     -  x64    general-purpose  1,2,3         40  £0.1920  £140.16
+Standard_E8-4s_v5     4 (8 billed)  64 GiB     -  x64    memory           -             24  £0.5040  £367.92
+Standard_NC4as_T4_v3             4  28 GiB     1  x64    gpu              2      Spot only  £0.5260  £383.98
+Standard_D2pls_v5                2   4 GiB     -  arm64  general-purpose  -              0        -        -
+
+Use --limit 0 to show all 7.
+Prices: pay-as-you-go estimates in GBP for Linux, at 730 hours a month; reservations, savings plans and discounts are not applied.
+1 SKU (Arm64) has no Linux retail price from Azure, so its price is shown as -.
