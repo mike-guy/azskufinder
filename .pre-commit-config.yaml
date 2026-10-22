@@ -32,7 +32,7 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 44.176.2
+    rev: 44.178.0
     hooks:
       - id: renovate-config-validator
         # Fail on deprecated options too, not just invalid ones.
