@@ -1,0 +1,167 @@
+{
+  "apiVersion": "azskufinder/v1",
+  "kind": "vm",
+  "criteria": [
+    {
+      "name": "vCPUs",
+      "value": ">= 2"
+    },
+    {
+      "name": "category",
+      "value": "general-purpose or memory"
+    }
+  ],
+  "pricing": {
+    "currency": "GBP",
+    "os": "linux",
+    "hoursPerMonth": 730
+  },
+  "location": "uksouth",
+  "summary": {
+    "considered": 900,
+    "matched": 12,
+    "restricted": 2,
+    "noQuota": 3,
+    "eligible": 7,
+    "spotOnly": 1,
+    "shown": 4
+  },
+  "spotQuota": {
+    "name": "lowPriorityCores",
+    "limit": 100,
+    "used": 4,
+    "free": 96
+  },
+  "results": [
+    {
+      "name": "Standard_D4s_v5",
+      "family": "standardDSv5Family",
+      "vcpus": 4,
+      "vcpusAvailable": 4,
+      "memoryGiB": 16,
+      "gpus": 0,
+      "architecture": "x64",
+      "category": "general-purpose",
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ],
+      "spotCapable": true,
+      "spotOnly": false,
+      "quota": [
+        {
+          "name": "standardDSv5Family",
+          "limit": 100,
+          "used": 20,
+          "free": 80
+        },
+        {
+          "name": "cores",
+          "limit": 50,
+          "used": 10,
+          "free": 40
+        }
+      ],
+      "pricing": {
+        "onDemandHourly": 0.192,
+        "onDemandMonthly": 140.16
+      },
+      "spot": {
+        "hourlyPrice": 0.0384,
+        "evictionRate": "0-5"
+      }
+    },
+    {
+      "name": "Standard_E8-4s_v5",
+      "family": "standardESv5Family",
+      "vcpus": 8,
+      "vcpusAvailable": 4,
+      "memoryGiB": 64,
+      "gpus": 0,
+      "architecture": "x64",
+      "category": "memory",
+      "zones": [],
+      "spotCapable": true,
+      "spotOnly": false,
+      "quota": [
+        {
+          "name": "standardESv5Family",
+          "limit": 24,
+          "used": 0,
+          "free": 24
+        }
+      ],
+      "pricing": {
+        "onDemandHourly": 0.504,
+        "onDemandMonthly": 367.92
+      },
+      "spot": {
+        "hourlyPrice": 0.1008,
+        "evictionRate": null
+      }
+    },
+    {
+      "name": "Standard_NC4as_T4_v3",
+      "family": "standardNCASv3_T4Family",
+      "vcpus": 4,
+      "vcpusAvailable": 4,
+      "memoryGiB": 28,
+      "gpus": 1,
+      "architecture": "x64",
+      "category": "gpu",
+      "zones": [
+        "2"
+      ],
+      "spotCapable": true,
+      "spotOnly": true,
+      "quota": [
+        {
+          "name": "standardNCASv3_T4Family",
+          "limit": 0,
+          "used": 0,
+          "free": 0
+        }
+      ],
+      "pricing": {
+        "onDemandHourly": 0.526,
+        "onDemandMonthly": 383.98
+      },
+      "spot": {
+        "hourlyPrice": 0.1052,
+        "evictionRate": "5-10"
+      }
+    },
+    {
+      "name": "Standard_D2pls_v5",
+      "family": "standardDPLSv5Family",
+      "vcpus": 2,
+      "vcpusAvailable": 2,
+      "memoryGiB": 4,
+      "gpus": 0,
+      "architecture": "arm64",
+      "category": "general-purpose",
+      "zones": [],
+      "spotCapable": false,
+      "spotOnly": false,
+      "quota": [
+        {
+          "name": "standardDPLSv5Family",
+          "limit": 10,
+          "used": 10,
+          "free": 0
+        }
+      ],
+      "pricing": {
+        "onDemandHourly": null,
+        "onDemandMonthly": null
+      }
+    }
+  ],
+  "warnings": [
+    {
+      "code": "spot-unavailable",
+      "message": "eviction rates could not be fetched"
+    }
+  ]
+}

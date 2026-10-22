@@ -1,0 +1,179 @@
+name: release
+
+# Run by hand ('gh workflow run release.yml'), so merging into main never
+# releases by itself. The release environment only allows main.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release, such as v0.1.0. Leave empty to work it out from the commits.
+        type: string
+        required: false
+      dry_run:
+        description: Build everything, but tag and publish nothing.
+        type: boolean
+        default: false
+
+permissions: {}
+
+env:
+  # renovate: datasource=github-releases depName=jdx/mise
+  MISE_VERSION: 2026.10.17
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.next.outputs.release }}
+      version: ${{ steps.next.outputs.version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Setup Mise
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          version: ${{ env.MISE_VERSION }}
+          cache: false
+      - name: Determine Next Version
+        id: next
+        env:
+          REQUESTED: ${{ inputs.version }}
+        run: |
+          current=$(make -s current-version)
+          if [ -n "$REQUESTED" ]; then
+            if ! printf '%s' "$REQUESTED" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::version must look like v1.2.3, not '$REQUESTED'"
+              exit 1
+            fi
+            next=$REQUESTED
+          else
+            next=$(make -s next-version)
+          fi
+          if git rev-parse -q --verify "refs/tags/$next" > /dev/null; then
+            release=false
+          else
+            release=true
+          fi
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          if [ "$release" = true ]; then
+            echo "Releasing **$next** (the latest is $current)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No release: no commit since $current calls for a new version." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  release:
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write # create the GitHub Release
+      id-token: write # sign the build provenance
+      attestations: write # store the build provenance
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      DRY_RUN: ${{ inputs.dry_run || false }}
+    steps:
+      # A short-lived token for the release App, which may push release tags
+      # and commit to the Homebrew tap and Scoop bucket.
+      - name: Create App Token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: azskufinder,homebrew-tap,scoop-bucket
+          permission-contents: write
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # No caches in the release job (Go or mise), so nothing from another run
+      # can reach a published build.
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Setup Mise
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          version: ${{ env.MISE_VERSION }}
+          cache: false
+
+      - name: Tag Release
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          bot_id=$(GH_TOKEN="$APP_TOKEN" gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          remote="https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # A re-run after a failure later in this job finds the tag already
+          # pushed: reuse it if it's on this commit, and stop if it isn't.
+          if git fetch --quiet "$remote" "refs/tags/$VERSION:refs/tags/$VERSION" 2> /dev/null; then
+            if [ "$(git rev-parse "$VERSION^{commit}")" != "$(git rev-parse HEAD)" ]; then
+              echo "::error::$VERSION already exists on a different commit"
+              exit 1
+            fi
+            echo "$VERSION is already tagged on this commit."
+            exit 0
+          fi
+          git tag --annotate "$VERSION" --message "$VERSION"
+          if [ "$DRY_RUN" = true ]; then
+            echo "Dry run: tagged $VERSION locally only."
+          else
+            git push "$remote" "refs/tags/$VERSION"
+          fi
+
+      - name: Build And Publish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HOMEBREW_SCOOP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            mise exec -- goreleaser release --clean --skip=publish,announce
+          else
+            mise exec -- goreleaser release --clean
+          fi
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: env.DRY_RUN != 'true'
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+
+      - name: Upload Dry Run Artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: env.DRY_RUN == 'true'
+        with:
+          name: dry-run-dist
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sbom.json
+            dist/checksums.txt
+            dist/homebrew/
+            dist/scoop/
+          retention-days: 7

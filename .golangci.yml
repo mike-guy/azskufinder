@@ -1,0 +1,72 @@
+# golangci-lint v2 configuration. The version is pinned in mise.toml; run it
+# with 'make lint' (or 'make fmt' for the formatters).
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck and unused.
+  default: standard
+  enable:
+    # HTTP correctness.
+    - bodyclose
+    - noctx
+    # Errors.
+    - errname
+    - errorlint
+    - nilerr
+    - nilnil
+    # Security.
+    - gosec
+    # Style and simplification.
+    - gocritic
+    - godot
+    - misspell
+    - nolintlint
+    - revive
+    - unconvert
+    # Correctness.
+    - exhaustive
+    - forcetypeassert
+    - sloglint
+    # Test conventions: t.Parallel and the current testing helpers.
+    - paralleltest
+    - tparallel
+    - usetesting
+    # Dependencies.
+    - gomoddirectives
+
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    misspell:
+      # The project is written in British English.
+      locale: UK
+      # NO_COLOR and go-pretty's text.Colors are names we don't control.
+      ignore-rules:
+        - color
+        - colors
+    sloglint:
+      kv-only: true
+      no-global: all
+
+  exclusions:
+    generated: lax
+    presets:
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - errorlint # tests compare error identity on purpose
+          - forcetypeassert
+          - gosec
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/mike-guy/azskufinder

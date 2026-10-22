@@ -1,0 +1,6 @@
+# svu works out the next version from conventional commits ('make next-version').
+# Stay on v0.x: a breaking change bumps the minor version until v1.0.0 is
+# tagged by hand.
+tag:
+  prefix: "v"
+v0: true
