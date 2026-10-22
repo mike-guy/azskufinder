@@ -108,6 +108,7 @@ release:
 
     ```sh
     gh attestation verify <archive> --repo mike-guy/azskufinder
+    gh attestation verify <archive> --bundle azskufinder_{{ .Version }}.sigstore.json --repo mike-guy/azskufinder
     sha256sum --check --ignore-missing checksums.txt
     ```
 

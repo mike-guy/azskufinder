@@ -1,0 +1,14 @@
+# Known vulnerabilities that don't affect azskufinder. OSV-Scanner reads this,
+# and so does the OpenSSF Scorecard's Vulnerabilities check. govulncheck and
+# Trivy don't, and neither fails on these anyway.
+#
+# Each entry expires, so it's looked at again rather than ignored for good.
+
+[[IgnoredVulns]]
+id = "GO-2026-5932"
+ignoreUntil = 2027-04-22
+reason = """\
+golang.org/x/crypto/openpgp is unmaintained, and no fixed version exists. \
+x/crypto is an indirect dependency through azidentity, which uses only \
+x/crypto/pkcs12, and openpgp isn't in the build (go list -deps ./...).\
+"""
