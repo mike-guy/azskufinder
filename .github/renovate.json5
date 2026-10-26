@@ -16,8 +16,10 @@
   // Nothing merges by itself: every update waits for a person.
   automerge: false,
 
-  // Run 'go mod tidy' after each Go module update.
-  postUpdateOptions: ["gomodTidy"],
+  // Run 'go mod tidy' after each Go module update, and rewrite the import paths
+  // in the code when a major update changes them (/v7 to /v9). Without that, the
+  // new module is unused and 'go mod tidy' drops it again.
+  postUpdateOptions: ["gomodTidy", "gomodUpdateImportPaths"],
 
   // Conventional commits. chore(deps) doesn't call for a release; fix(deps)
   // (below) makes the next release at least a patch.
@@ -47,6 +49,17 @@
       matchManagers: ["mise"],
       matchUpdateTypes: ["minor", "patch"],
       groupName: "development tools",
+    },
+    {
+      description: "Tools and mise itself wait a few days after release, so their binaries exist when mise.lock is generated. Python is built by python-build-standalone after CPython tags a release; without the wait, mise.lock loses its download URLs and every locked CI job fails. Three days is a starting value, not a measured one",
+      matchManagers: ["mise"],
+      minimumReleaseAge: "3 days",
+    },
+    {
+      description: "The mise version pin in the workflows is downloaded from a GitHub release",
+      matchManagers: ["custom.regex"],
+      matchDepNames: ["jdx/mise"],
+      minimumReleaseAge: "3 days",
     },
     {
       description: "mise itself goes with the tools it installs",

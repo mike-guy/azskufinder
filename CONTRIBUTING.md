@@ -112,6 +112,13 @@ it's tracking or waiting on.
 - Go module and toolchain updates are `fix(deps):` commits, so the next
   release is at least a patch: the new code ships in the binary. Everything
   else is `chore(deps):` and doesn't call for a release.
+- Development tool updates wait three days after release. Renovate regenerates
+  `mise.lock` when it raises the pull request, and a tool whose binaries aren't
+  published yet (Python's often trail the release) leaves its entry without
+  download URLs, which fails every CI job that installs the tools.
+- Renovate rewrites import paths for a major Go module update, but the code
+  changes the new version needs (renamed types, changed signatures) are yours
+  to make on the pull request's branch.
 - Security fixes are raised straight away, labelled `security`.
 - Nothing merges automatically. Review each pull request, and merge it once the
   checks pass.
