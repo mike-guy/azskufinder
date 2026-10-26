@@ -42,4 +42,4 @@ jobs:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: "false"
           RENOVATE_PLATFORM_COMMIT: enabled
-          LOG_LEVEL: debug # TEMPORARY: back to info once runs stop aborting
+          LOG_LEVEL: info
