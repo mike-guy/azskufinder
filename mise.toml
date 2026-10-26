@@ -17,10 +17,10 @@ lockfile = true
 "aqua:caarlos0/svu" = "3.4.1"
 "aqua:rhysd/actionlint" = "1.7.12"
 "aqua:aquasecurity/trivy" = "0.76.1"
-"aqua:goreleaser/goreleaser" = "2.18.3"
+"aqua:goreleaser/goreleaser" = "2.19.0"
 "aqua:zizmorcore/zizmor" = "1.31.1"
 "aqua:pre-commit/pre-commit" = "4.7.0"
 "aqua:gitleaks/gitleaks" = "8.30.1"
 # pre-commit ships as a Python zipapp; pinning Python means it never runs on
 # an old system python3 (macOS ships 3.9).
-python = "3.15.1"
+python = "3.15.2"
