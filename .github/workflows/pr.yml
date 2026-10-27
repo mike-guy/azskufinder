@@ -8,7 +8,7 @@ permissions: {}
 # The version of mise that installs the tools pinned in mise.toml.
 env:
   # renovate: datasource=github-releases depName=jdx/mise
-  MISE_VERSION: 2026.10.18
+  MISE_VERSION: 2026.10.19
 
 concurrency:
   group: pr-${{ github.event.pull_request.number }}
