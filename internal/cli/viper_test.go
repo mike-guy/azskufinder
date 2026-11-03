@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/mike-guy/azskufinder/internal/app"
 	"github.com/mike-guy/azskufinder/internal/output"
+	"github.com/mike-guy/azskufinder/internal/sql"
 	"github.com/mike-guy/azskufinder/internal/vm"
 )
 
@@ -228,24 +230,40 @@ func TestFlagCompletions_parse(t *testing.T) {
 		return nil
 	}
 
+	vmPath := []string{"vm"}
+	vcorePath := []string{"sql", "db", "vcore"}
+	dtuPath := []string{"sql", "db", "dtu"}
+
 	tests := []struct {
+		path  []string
 		flag  string
 		parse func(string) error
 	}{
-		{flag: "output", parse: func(s string) error { _, err := output.ParseFormat(s); return err }},
-		{flag: "currency", parse: func(s string) error { return parseErr(slices.Contains(currencies, s)) }},
-		{flag: "os", parse: func(s string) error { _, err := vm.ParseOS(s); return err }},
-		{flag: "sort-by", parse: func(s string) error { _, err := vm.ParseSort(s); return err }},
-		{flag: "arch", parse: func(s string) error { _, err := vm.ParseArch(s); return err }},
-		{flag: "category", parse: func(s string) error { _, err := vm.ParseCategories(s); return err }},
+		{path: vmPath, flag: "output", parse: func(s string) error { _, err := output.ParseFormat(s); return err }},
+		{path: vmPath, flag: "currency", parse: func(s string) error { return parseErr(slices.Contains(currencies, s)) }},
+		{path: vmPath, flag: "os", parse: func(s string) error { _, err := vm.ParseOS(s); return err }},
+		{path: vmPath, flag: "sort-by", parse: func(s string) error { _, err := vm.ParseSort(s); return err }},
+		{path: vmPath, flag: "arch", parse: func(s string) error { _, err := vm.ParseArch(s); return err }},
+		{path: vmPath, flag: "category", parse: func(s string) error { _, err := vm.ParseCategories(s); return err }},
+
+		{path: vcorePath, flag: "tier", parse: func(s string) error { _, err := sql.ParseVCoreTiers(s); return err }},
+		{path: vcorePath, flag: "compute", parse: func(s string) error { _, err := sql.ParseCompute(s); return err }},
+		{path: vcorePath, flag: "hardware", parse: func(s string) error { _, err := sql.ParseHardware(s); return err }},
+		{path: vcorePath, flag: "licence", parse: func(s string) error { _, err := sql.ParseLicence(s); return err }},
+		{path: vcorePath, flag: "backup-redundancy", parse: func(s string) error { _, err := sql.ParseBackupRedundancy(s); return err }},
+		{path: vcorePath, flag: "sort-by", parse: func(s string) error { _, err := sql.ParseVCoreSort(s); return err }},
+
+		{path: dtuPath, flag: "tier", parse: func(s string) error { _, err := sql.ParseDTUTiers(s); return err }},
+		{path: dtuPath, flag: "backup-redundancy", parse: func(s string) error { _, err := sql.ParseBackupRedundancy(s); return err }},
+		{path: dtuPath, flag: "sort-by", parse: func(s string) error { _, err := sql.ParseDTUSort(s); return err }},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.flag, func(t *testing.T) {
+		t.Run(strings.Join(tc.path, " ")+" --"+tc.flag, func(t *testing.T) {
 			t.Parallel()
 
 			root, _, _ := newTestRoot(t)
-			cmd := vmCmd(t, root)
+			cmd := subCmd(t, root, tc.path...)
 
 			complete, ok := cmd.GetFlagCompletionFunc(tc.flag)
 			if !ok {

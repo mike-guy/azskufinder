@@ -4,7 +4,7 @@
 <h1 align="center">azskufinder</h1>
 
 <p align="center">
-  <strong>Find the Azure VM sizes you can actually deploy.</strong><br>
+  <strong>Find the Azure VM and SQL sizes you can actually deploy.</strong><br>
   Filtered by your requirements, your subscription's quota and Azure's restrictions, then priced.
 </p>
 
@@ -30,10 +30,12 @@ The app will takes your requirements, check them to see what your subscription
 can actually deploy right now, and shows only the sizes that will work,
 cheapest first (by default).
 
-Currently only supports VM SKUs, but may be expanded in future.
+It supports virtual machines (`vm`) and Azure SQL Database single databases,
+by purchasing model (`sql db vcore` and `sql db dtu`).
 
 ```console
 $ azskufinder vm -l uksouth --cpus 4 --memory 16
+$ azskufinder sql db vcore -l uksouth --vcores 4 --tier general-purpose
 ```
 
 ## Contents
@@ -73,6 +75,9 @@ $ azskufinder vm -l uksouth --cpus 4 --memory 16
   or exact values
 - Live SKU restrictions, zone restrictions and family and regional vCPU quota
 - Pay-as-you-go prices in GBP, USD or EUR, for Linux or Windows
+- Azure SQL Database SKUs, vCore-based (provisioned and serverless) or
+  DTU-based, checked against SQL restrictions and vCore quota, and priced with or
+  without Azure Hybrid Benefit
 - Spot prices, 28-day eviction rates and Spot-only results
 - Constrained-core SKUs shown with the vCPUs you get and the vCPUs you're billed
   for
@@ -244,8 +249,9 @@ azskufinder completion fish > ~/.config/fish/completions/azskufinder.fish
 azskufinder completion powershell | Out-String | Invoke-Expression
 ```
 
-Completion covers commands, flags and the fixed values of `--arch`,
-`--category`, `--disk-controller`, `--currency`, `--os` and `--sort-by`.
+Completion covers commands, flags and the fixed values of `--output`,
+`--currency`, `--arch`, `--category`, `--disk-controller`, `--os`, `--tier`,
+`--compute`, `--hardware`, `--licence`, `--backup-redundancy` and `--sort-by`.
 
 ## Signing in to Azure
 
@@ -472,6 +478,91 @@ export AZSKUFINDER_CURRENCY=EUR
 azskufinder vm --cpus 4 --memory 16
 ```
 
+### Azure SQL Database
+
+```text
+azskufinder sql db vcore [flags]
+azskufinder sql db dtu [flags]
+```
+
+`sql db` finds single-database SKUs, one purchasing model at a time, as the
+two have little in common:
+
+- `sql db vcore` lists vCore-based SKUs such as `GP_Gen5_4`: General Purpose,
+  Business Critical and Hyperscale, provisioned or serverless, sized by vCores
+  and hardware.
+- `sql db dtu` lists DTU-based SKUs such as `S3`: Basic, Standard and Premium,
+  sized by DTUs.
+
+Each is checked against what Azure offers your subscription in the location and
+against the SQL vCore quota left there, then priced.
+
+General Purpose or Hyperscale with exactly 4 vCores, in UK South (the first rows
+of the table):
+
+```sh
+azskufinder sql db vcore -l uksouth --vcores 4 --exact-match --tier general-purpose,hyperscale
+```
+
+```text
+NAME         TIER             COMPUTE      HARDWARE         VCORES    MEMORY  MAXSTORAGE  ZR   FREEQUOTA   HOURLY   MONTHLY
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+HS_Gen5_4    hyperscale       provisioned  standard-series       4  20.4 GiB     128 TiB  yes        150  £0.6867   £501.26
+GP_Gen5_4    general-purpose  provisioned  standard-series       4  20.4 GiB       1 TiB  yes        150  £0.8729   £637.19
+HS_S_Gen5_4  hyperscale       serverless   standard-series       4      auto     128 TiB  yes        150  £1.4135  £1031.84
+```
+
+Serverless memory scales with the workload, so it is shown as `auto`.
+
+Serverless with up to 8 vCores and zone redundancy, priced with Azure Hybrid
+Benefit:
+
+```sh
+azskufinder sql db vcore -l uksouth --compute serverless --vcores 8 --exact-match --zone-redundant --licence ahb
+```
+
+DTU-based SKUs with at least 100 DTUs (the first rows of the table):
+
+```sh
+azskufinder sql db dtu -l uksouth --dtus 100
+```
+
+```text
+NAME  TIER      DTUS  MAXSTORAGE  ZR   FREEQUOTA   HOURLY  MONTHLY
+──────────────────────────────────────────────────────────────────
+S3    standard   100       1 TiB  no         150  £0.1895  £138.31
+S4    standard   200       1 TiB  no         150  £0.3791  £276.71
+P1    premium    125       1 TiB  yes        150  £0.5874  £428.79
+```
+
+A database that must hold 2 TiB of data. `--storage`, in either command, keeps
+the SKUs whose largest data size is at least that big:
+
+```sh
+azskufinder sql db vcore -l uksouth --storage 2048
+```
+
+Things to know:
+
+- **Restrictions.** SKUs Azure has disabled or doesn't offer to your
+  subscription are left out. When Azure restricts SQL provisioning in the whole
+  region for your subscription, everything there is left out.
+- **Quota.** Both commands check the regional vCore quota for SQL Database.
+  Serverless uses its maximum vCores, and a DTU-based SKU one vCore for every
+  100 DTUs, rounded up. The logical server quota is shown, not used to filter,
+  as a database can go on an existing server.
+- **Memory.** Azure publishes no memory figure for SQL Database, so `sql db
+  vcore` takes it from the documented amount per vCore for the hardware.
+  Serverless memory scales with the workload, so it is shown as auto, and
+  `--memory` can't be used with `--compute serverless`.
+- **Prices.** For `sql db vcore`, compute plus the SQL licence, or compute alone
+  with `--licence ahb`. Hyperscale has no licence fee, and the serverless price
+  already includes it. `--zone-redundant` adds the zone redundancy surcharge
+  where Azure charges one. Serverless is billed per second of use, so its price
+  is for running at its maximum vCores all month. DTU prices always include the
+  licence; Azure Hybrid Benefit doesn't apply to them. Storage and backup aren't
+  included in either.
+
 ### Troubleshooting a run
 
 `--debug` writes debug logs to standard error, including the Azure SDK's
@@ -541,6 +632,11 @@ replaced by underscores and prefixed with `AZSKUFINDER_`.
 | `--no-colour` | `AZSKUFINDER_NO_COLOUR` |
 
 `azskufinder vm --help` lists the variable for every flag.
+
+Environment variables and config file keys apply to every command. Some
+flags, such as `--sort-by` and `--tier`, take different values in different
+commands, so a value set for one, such as `sort-by: gpus` for `vm`, is a usage
+error in another. The error's hint says so.
 
 ### Config file
 
@@ -632,6 +728,20 @@ Azure didn't report.
 
 </details>
 
+`sql db vcore` and `sql db dtu` write documents of the same version with `kind`
+set to `sql-db-vcore` or `sql-db-dtu`, each with only its own model's fields.
+Both have a `serverQuota`, and each result's `quotaNeeded` is how much of the
+regional vCore quota one more uses.
+
+- `sql-db-vcore`: the `pricing` block has `currency`, `licence` (`included` or
+  `ahb`), `zoneRedundant` and `hoursPerMonth`. Each result has `vcores`,
+  `compute`, `hardware` and `memoryGiB` (`null` for serverless), and its
+  `pricing` has `hourly` and `monthly` totals with their parts:
+  `computeHourly`, `licenceHourly` and `zoneRedundancyHourly`, each `null` when
+  not charged separately.
+- `sql-db-dtu`: the `pricing` block has `currency` and `hoursPerMonth`. Each
+  result has `dtus`, and its `pricing` has `hourly` and `monthly`.
+
 ## Colour and accessibility
 
 Tables use colour and bold text in a terminal. Colour is turned off
@@ -650,7 +760,7 @@ redirecting one doesn't change the other.
 | `--location` | `-l` | | Azure location, for example `uksouth` (required) |
 | `--output` | `-o` | `table` | Output format: `table` or `json` |
 | `--currency` | | `GBP` | Currency for prices: `GBP`, `USD` or `EUR` |
-| `--limit` | `-n` | `25` | Maximum number of SKUs to show; `0` for all |
+| `--limit` | `-n` | `25` | Maximum number of results to show; `0` for all |
 | `--timeout` | | `2m` | Give up after this long; `0` for no limit |
 | `--config` | | see [Config file](#config-file) | Path to a YAML config file |
 | `--no-colour` | | | Don't colour or style the output |
@@ -673,6 +783,34 @@ redirecting one doesn't change the other.
 | `--include-spot` | `-S` | | Add Spot prices and eviction rates, and keep Spot-only SKUs |
 | `--sort-by` | | `monthly` | Column to sort by, with `:desc` for descending (see below) |
 
+### `sql db vcore` flags
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--tier` | `-t` | | Service tiers, comma separated: `general-purpose`, `business-critical`, `hyperscale` |
+| `--compute` | | `any` | Compute model: `provisioned`, `serverless` or `any` |
+| `--hardware` | | | Hardware, comma separated: `standard-series`, `premium-series`, `premium-series-memory-optimised`, `dc-series` |
+| `--vcores` | `-c` | | Number of vCores (serverless: maximum vCores): a minimum, or exact with `--exact-match` |
+| `--memory` | `-m` | | Memory in GiB: a minimum, or exact with `--exact-match` |
+| `--storage` | | | Data size in GiB the database must be able to hold |
+| `--exact-match` | `-e` | | Make `--vcores` and `--memory` exact values |
+| `--zone-redundant` | | | Keep SKUs that can be zone redundant, and add the surcharge |
+| `--backup-redundancy` | | `any` | Backup storage redundancy: `local`, `zone`, `geo`, `geo-zone` or `any` |
+| `--licence` | | `included` | SQL licence to price: `included`, or `ahb` for Azure Hybrid Benefit |
+| `--sort-by` | | `monthly` | Column to sort by, with `:desc` for descending (see below) |
+
+### `sql db dtu` flags
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--tier` | `-t` | | Service tiers, comma separated: `basic`, `standard`, `premium` |
+| `--dtus` | | | Number of DTUs: a minimum, or exact with `--exact-match` |
+| `--storage` | | | Data size in GiB the database must be able to hold |
+| `--exact-match` | `-e` | | Make `--dtus` an exact value |
+| `--zone-redundant` | | | Keep SKUs that can be zone redundant |
+| `--backup-redundancy` | | `any` | Backup storage redundancy: `local`, `zone`, `geo`, `geo-zone` or `any` |
+| `--sort-by` | | `monthly` | Column to sort by, with `:desc` for descending (see below) |
+
 ### Categories
 
 The category comes from the series letter at the start of the SKU name.
@@ -692,10 +830,16 @@ matched only when no `--category` is given.
 
 ### Sort columns
 
-`name`, `vcpus`, `memory`, `nics`, `gpus`, `arch`, `category`, `freequota`,
+For `vm`: `name`, `vcpus`, `memory`, `nics`, `gpus`, `arch`, `category`, `freequota`,
 `hourly`, `monthly`, `spot` and `eviction`. Add `:desc` to sort in descending order. SKUs
 with no value for the column always come last, and so do `Spot only` SKUs when
 sorting by `freequota`. `spot` and `eviction` need `--include-spot`.
+
+For `sql db vcore`: `name`, `tier`, `compute`, `hardware`, `vcores`, `memory`,
+`maxstorage`, `freequota`, `hourly` and `monthly`.
+
+For `sql db dtu`: `name`, `tier`, `dtus`, `maxstorage`, `freequota`, `hourly`
+and `monthly`.
 
 ### Exit codes
 
@@ -719,6 +863,10 @@ quota, you can
 It's either restricted for your subscription in that location, or your remaining
 family or regional vCPU quota is too small for it. Both are counted in the
 summary. `--debug` shows the reason for each SKU.
+
+**`sql db` says every SKU in a region is restricted.**
+Azure doesn't let your subscription create SQL resources in that region, so
+every SKU there is counted as restricted. Try another region.
 
 **The prices don't match my invoice.**
 They're public pay-as-you-go retail prices for the VM itself. Reservations,

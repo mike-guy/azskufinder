@@ -1,0 +1,22 @@
+
+[1m12 matching SKUs in uksouth[0m
+[32mShowing 3 of 7 deployable SKUs with filters:[0m
+[32m - Tier general-purpose or hyperscale[0m
+[32m - vCores >= 4[0m
+[32m - Zone Redundant yes[0m
+[33m2 restricted for this subscription[0m
+[33m3 without enough quota[0m
+
+[1mNAME[0m         [1mTIER[0m               [1mCOMPUTE[0m      [1mHARDWARE[0m         [1mVCORES[0m    [1mMEMORY[0m  [1mMAXSTORAGE[0m  [1mZR[0m   [1mFREEQUOTA[0m   [1mHOURLY[0m   [1mMONTHLY[0m
+[2m─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[1mGP_Gen5_4[0m    general-purpose    provisioned  standard-series       4  20.4 GiB       1 TiB  yes        146  £0.5740   £419.02
+[1mHS_S_Gen5_4[0m  hyperscale         serverless   standard-series       4      auto     128 TiB  yes          -  £1.4135  £1031.84
+[1mBC_DC_4[0m      business-critical  provisioned  dc-series             4    18 GiB     768 GiB  no         146        -         -
+
+[2mUse --limit 0 to show all 7.[0m
+[2mPrices: pay-as-you-go estimates in GBP for compute, with Azure Hybrid Benefit covering the SQL licence, at 730 hours a month; storage, backup, reservations and discounts are not included.[0m
+[2mAzure Hybrid Benefit does not apply to Hyperscale or serverless, which have no separate licence fee.[0m
+[2mServerless is billed per second of use; its price is for its maximum vCores for 730 hours, and its memory scales with the workload (auto).[0m
+[2mZone redundancy surcharges are included where Azure charges one.[0m
+[2m1 has no retail price from Azure, so its price is shown as -.[0m
+[2mLogical servers: 249 of 250 free in uksouth.[0m

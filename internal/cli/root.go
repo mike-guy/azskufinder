@@ -198,6 +198,7 @@ Exit codes: 0 success, 1 runtime failure, 2 usage error, 130 interrupted.`,
 	registerFixed(root, "currency", currencies...)
 
 	root.AddCommand(newVMCmd(application))
+	root.AddCommand(newSQLCmd(application))
 
 	return root
 }

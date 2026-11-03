@@ -72,6 +72,19 @@ func TestRoot(t *testing.T) { //nolint:paralleltest,tparallel // isolateEnv uses
 			args: []string{"--config", config, "vm", "--subscription-id=", "--location", "uksouth"},
 			want: ExitUsageError,
 		},
+		{name: "sql shows help", args: []string{"--config", config, "sql"}, want: ExitSuccess, wantStdout: "azskufinder sql [command]"},
+		{name: "sql db shows help", args: []string{"--config", config, "sql", "db"}, want: ExitSuccess, wantStdout: "azskufinder sql db [command]"},
+		{name: "sql db vcore help", args: []string{"--config", config, "sql", "db", "vcore", "--help"}, want: ExitSuccess, wantStdout: "azskufinder sql db vcore [flags]"},
+		{name: "sql db dtu help", args: []string{"--config", config, "sql", "db", "dtu", "--help"}, want: ExitSuccess, wantStdout: "azskufinder sql db dtu [flags]"},
+		{name: "unknown sql subcommand", args: []string{"--config", config, "sql", "mi"}, want: ExitUsageError},
+		{name: "unknown purchasing model", args: []string{"--config", config, "sql", "db", "pool"}, want: ExitUsageError},
+		{name: "vCore flag on sql db dtu", args: []string{"--config", config, "sql", "db", "dtu", "--vcores", "2"}, want: ExitUsageError},
+		{name: "DTU flag on sql db vcore", args: []string{"--config", config, "sql", "db", "vcore", "--dtus", "100"}, want: ExitUsageError},
+		{
+			name: "invalid sql db vcore options",
+			args: []string{"--config", config, "sql", "db", "vcore", "--subscription-id", testSubscriptionID, "--location", "uksouth", "--tier", "standard"},
+			want: ExitUsageError,
+		},
 		{name: "missing config file", args: []string{"--config", missing, "vm"}, want: ExitUsageError},
 		{name: "invalid setting in config file", args: []string{"--config", badDebug}, want: ExitUsageError},
 	}
@@ -163,4 +176,20 @@ func TestLogFailure(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestRoot_sqlSortFromEnv checks that a vm sort column set in the environment
+// reaches sql db dtu, and is reported with the hint that the environment
+// applies to every command.
+func TestRoot_sqlSortFromEnv(t *testing.T) {
+	isolateEnv(t)
+	t.Setenv("AZSKUFINDER_SORT_BY", "gpus")
+
+	root, _, _ := newTestRoot(t)
+	root.SetArgs([]string{"--config", writeConfig(t, ""), "sql", "db", "dtu", "--subscription-id", testSubscriptionID, "--location", "uksouth"})
+
+	err := root.ExecuteContext(t.Context())
+	checkUsageError(t, err,
+		`--sort-by: unknown column "gpus", choose one of: name, tier, dtus, maxstorage, freequota, hourly, monthly`,
+		"Values differ between commands, and AZSKUFINDER_SORT_BY or sort-by in the config file applies to every command.")
 }

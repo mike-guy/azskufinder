@@ -19,11 +19,16 @@ in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Overview
 
-azskufinder is one binary with one command so far, `vm`. A run reads settings,
+azskufinder is a cli app with two resource commands so far: `vm`, and `sql`
+with `sql db vcore` and `sql db dtu`. A `vm` run reads settings,
 asks Azure for three things at once (the VM SKUs offered in a location, the
 subscription's compute quota there, and retail prices), narrows the SKUs down to
 the ones the subscription can deploy, sorts and limits them, then prints a table
 or JSON. With `--include-spot` it also reads Spot eviction rates.
+
+The `sql` commands follow the same shape: `runSQLDBVCore` and `runSQLDBDTU` are their
+composition roots (each follows `runVM`, building its service with `newSQLService` in `cli/sql.go`), and `sql.Service.FindVCore` or `FindDTU` reads the SQL capabilities, the SQL usages and retail prices at the same time,
+then filters, prices and ranks them.
 
 ```text
 cmd/azskufinder/main.go       signal context, build version
@@ -45,7 +50,7 @@ vm.Service.Find               ┌─ armSource.listSKUs   ─┐
         │                     returns vm.Result: plain data plus warnings
         ▼
 writeVMResult (cli/vm_output.go)   table via output.Table, or JSON via output.JSON, on stdout
-printWarnings                      on stderr
+printWarning                       on stderr, once per warning
 ```
 
 ## Layout
@@ -66,6 +71,13 @@ internal/
     format.go         Money, Zones, NoValue
     style.go          Styles (colour on or off, as a value), Sanitise
     spinner.go        Spinner
+  sql/              everything Azure SQL Database-specific, by purchasing model; returns plain data
+    sql.go            result types: VCoreDatabase, DTUDatabase, DBResult[T], Summary, Warning
+    service.go        Service.FindVCore and FindDTU over one findDB[T], and the armSource and priceSource interfaces
+    arm.go            ARMSource: the ARM adapter (SQL capabilities, SQL subscription usages)
+    filter.go         VCoreFilter, DTUFilter and their Parse* functions, then the filtering: parseVCore, parseDTU, assess[T], applyQuota, rank
+    pricing.go        priceFilter, indexPrices, and pricing by vCore, licence, zone redundancy and DTU
+    sort.go           Sort, ParseVCoreSort, ParseDTUSort and the tables of sortable columns
   vm/               everything VM-specific; returns plain data
     vm.go             result types: VM, Result, Summary, Warning and the warning codes
     service.go        Service.Find, and the armSource and priceSource interfaces it consumes
@@ -77,12 +89,19 @@ internal/
     root.go           Execute, exit codes, newRoot and the global flags
     vm.go             newVMCmd, readVMOptions, runVM
     vm_output.go      the vm table's columns, headline and footer, and the JSON document
+    sql.go            newSQLCmd (the parent), the flags and options both sql db commands share, newSQLService
+    sql_db.go         newSQLDBCmd, the parent of vcore and dtu
+    sql_db_vcore.go   newSQLDBVCoreCmd, readSQLVCoreOptions, runSQLDBVCore
+    sql_db_dtu.go     newSQLDBDTUCmd, readSQLDTUOptions, runSQLDBDTU
+    sql_output.go     the headline, footer and helpers both sql tables share
+    sql_db_vcore_output.go  the vcore table's columns and footer, and its JSON document
+    sql_db_dtu_output.go    the dtu table's columns and footer, and its JSON document
     options.go        commonOptions and the strict readers (readBool, readOptionalInt, ...)
     viper.go          setupViper, config file, completion and env-name helpers
     defaults.go       defaults, accepted currencies, the config path
     errors.go         usageError, withHint, hintFor, printError
     colour.go         setStyles, colourFor
-    spinner.go        spinnerOn
+    spinner.go        spinnerOn, startSpinner
     timeout.go        withTimeout
     helpers.go        isTerminal
 ```
@@ -102,18 +121,21 @@ graph TD
     cmd[cmd/azskufinder] --> cli
     cli --> app
     cli --> vm
+    cli --> sql
     cli --> output
     cli --> azure
     cli --> retail
     app --> output
     vm --> azure
     vm --> retail
+    sql --> azure
+    sql --> retail
 ```
 
 Each arrow is one import. `cli` imports `output`, `azure` and `retail` directly:
 `output` for styles, rendering and sanitising; `azure` for the credential,
 client options, SDK logging, input checks, error text and `ErrSignIn`; and
-`retail` to build the price client it hands to `vm`.
+`retail` to build the price client it hands to `vm` or `sql`.
 
 | Package | May import | Must not import |
 |---|---|---|
@@ -121,6 +143,7 @@ client options, SDK logging, input checks, error text and `ErrSignIn`; and
 | `cli` | every `internal` package, cobra, viper, azcore (to read `*azcore.ResponseError`) | `cmd` |
 | `app` | `output`, viper | `cli`, any resource package, `azure`, `retail` |
 | `vm` | `azure`, `retail`, the ARM SDK packages, errgroup | `cli`, `app`, `output`, cobra, viper |
+| `sql` | `azure`, `retail`, `armsql/v2`, errgroup | `cli`, `app`, `output`, `vm`, cobra, viper |
 | `azure` | azcore, azidentity | any other `internal` package |
 | `retail` | azcore `policy` and `runtime` | any other `internal` package |
 | `output` | go-pretty | any other `internal` package, the Azure SDK |
@@ -130,9 +153,10 @@ Some rules within packages too:
 - **Only `cli` knows about cobra and viper.** Domain packages take plain values
   (`vm.Filter`, a location string), so they can be used and tested without a
   command line.
-- **Only `vm.ARMSource` touches ARM SDK model types.** It converts them to the
-  package's own `sku` and `quota` structs straight away (`convertSKU`, `deref`),
-  so the filtering never sees an SDK pointer.
+- **Only `vm.ARMSource` and `sql.ARMSource` touch ARM SDK model types.** They
+  convert them to their package's own structs straight away (`convertSKU`,
+  `convertDBCaps`, `deref`), so the filtering never sees an SDK
+  pointer.
 - **`azure`, `retail` and `output` know nothing about any resource type.** A
   second resource command must not need changes there. If it seems to, the code
   probably belongs in the resource package or in `cli`.
@@ -144,15 +168,24 @@ Third-party libraries, and what each is for:
 
 | Library | Used for | Used in |
 |---|---|---|
-| `azure-sdk-for-go/sdk/azcore`, `azidentity` | pipeline, retries, credentials, logging | `azure`, `retail`, `vm`, `cli` |
-| `armcompute/v7`, `armresourcegraph` | Resource SKUs, Usages, Resource Graph | `vm` (`arm.go` only) |
+| `azure-sdk-for-go/sdk/azcore`, `azidentity` | pipeline, retries, credentials, logging | `azure`, `retail`, `vm`, `sql`, `cli` |
+| `armcompute/v9`, `armresourcegraph` | Resource SKUs, Usages, Resource Graph | `vm` (`arm.go` only) |
+| `armsql/v2` | SQL capabilities and subscription usages | `sql` (`arm.go` only) |
 | `spf13/cobra`, `spf13/viper` | commands, flags, env and config file | `cli`; `app` holds the `*viper.Viper` |
 | `jedib0t/go-pretty/v6` | table layout and ANSI colour | `output` |
-| `golang.org/x/sync/errgroup` | concurrent fetches | `vm` |
+| `golang.org/x/sync/errgroup` | concurrent fetches | `vm`, `sql` |
 | `google/go-cmp` | test diffs | tests only |
 
 Add a dependency only when the standard library can't reasonably do the job,
 and say why in the pull request.
+
+`armsql/v2` is a beta (pinned to v2.0.0-beta.9, which calls the
+2026-08-01-preview API). The last stable `armsql`, v1.2.0, is from 2023 and
+was ruled out for lacking SQL Managed Instance fields. `sql mi` has since been
+dropped, and v1.2.0 does have every field `sql db` reads, but it calls the
+older 2020-11-01-preview API, so neither is a stable API. Review the beta's
+upgrades by hand rather than letting them merge automatically, and move to a
+stable v2 when there is one.
 
 ## Wiring and dependency injection
 
@@ -164,6 +197,9 @@ and they're all wired up in one place.
 `cli` is the composition root. `runVM` in `cli/vm.go` builds everything a run
 needs, in this order:
 
+The steps below are `runVM`'s; `runSQLDBVCore` and `runSQLDBDTU` follow the same order,
+using `newSQLService` (`cli/sql.go`) for steps 3 to 6.
+
 1. `readVMOptions` reads and validates every setting into `vmOptions` (the
    shared `commonOptions` plus a `vm.Filter`).
 2. `withTimeout` bounds the run with `--timeout`.
@@ -174,7 +210,7 @@ needs, in this order:
 5. `vm.NewARMSource(subscriptionID, cred, clientOpts, logger)` and
    `retail.NewClient(currency, clientOpts, logger)`.
 6. `vm.NewService(src, prices, logger)`.
-7. `svc.Find(ctx, location, filter)`, then `writeVMResult` and `printWarnings`.
+7. `svc.Find(ctx, location, filter)`, then `writeVMResult` and `printWarning` for each warning.
 
 ### What lives on `App`, and what doesn't
 
@@ -190,8 +226,9 @@ needs it.
 
 ### Interfaces belong to the consumer
 
-The module has exactly two interfaces, both unexported and in
-`vm/service.go`:
+The module has four interfaces, all unexported: `armSource` and `priceSource`
+in `vm/service.go`, and two of the same names in `sql/service.go`, each holding
+only the methods its own `Service` calls. The ones in `vm`:
 
 ```go
 type armSource interface {
@@ -213,7 +250,7 @@ type priceSource interface {
 - **Declare an interface in the package that uses it**, with only the methods it
   calls. Don't declare one next to its implementation "for mocking".
 - **Don't add an interface with one implementation and no test that needs it.**
-  These two exist because `Service.Find` is tested with hand-written fakes.
+  These exist because each `Service` is tested with hand-written fakes.
 - `armSource` has unexported methods because its implementation is in the same
   package, which keeps the adapter's surface private. `priceSource.Query` is
   exported because `retail.Client` is in another package.
@@ -253,7 +290,8 @@ type priceSource interface {
   drop-in for the real one, because the interface states the contract in plain
   types (`sku`, `quota`, `retail.Price`), not SDK types.
 - **Interface segregation.** The interfaces hold only the methods `Service`
-  calls: three for ARM and one for prices.
+  calls: for `vm`, three for ARM and one for prices; for `sql`, two for ARM and one
+  for prices.
 - **Dependency inversion.** `Service` depends on the interfaces it declares, not
   on the SDK. Concrete clients are chosen once, in `cli`.
 
@@ -343,7 +381,7 @@ Flags with fixed values offer them for shell completion with `registerFixed`.
 `log/slog`, text to stderr, at info level until `--debug` lowers it to debug.
 The code only logs at debug level: anything a person must see is a warning or
 an error. Every logger carries a `component` attribute (`cli`, `vm`, `vm.arm`,
-`retail`, `azure-sdk`). Log keys are `snake_case`, attributes are plain
+`sql`, `sql.arm`, `retail`, `azure-sdk`). Log keys are `snake_case`, attributes are plain
 key-value pairs, and nothing uses slog's global logger (sloglint checks the
 last two). Log the
 reason each SKU was left out (`"reason", "no-quota"`), the counts and the
@@ -377,11 +415,15 @@ Graph loop also has a page cap (`spotMaxPages`).
 
 `-o json` writes `vmDocument` (`cli/vm_output.go`): `apiVersion`, `kind`,
 `criteria` and `pricing`, with `vm.Result` embedded so its fields sit at the top
-level. Within one `jsonAPIVersion` (`azskufinder/v1`), fields may only be
-added. Renaming, removing or retyping one means a new version.
-`TestVMDocument_schema` enforces this against
-`cli/testdata/schema_azskufinder_v1.txt`: `-update` records new fields, but it
-can't paper over a removed or changed one. Slices in the output are never nil,
+level. The sql db commands write `sqlVCoreDocument` and `sqlDTUDocument`
+(`cli/sql_db_vcore_output.go`, `cli/sql_db_dtu_output.go`) the same way, with
+`kind` `sql-db-vcore` or `sql-db-dtu`. Within one `jsonAPIVersion` (`azskufinder/v1`), fields
+may only be added. Renaming, removing or retyping one means a new version.
+`TestVMDocument_schema` and `TestSQLDocument_schema` enforce this against
+`cli/testdata/schema_azskufinder_v1.txt` and its `_sql-db-vcore` and
+`_sql-db-dtu`
+siblings: `-update` records new fields, but it can't paper over a removed or
+changed one. Slices in the output are never nil,
 so scripts see `[]`, not `null`.
 
 ## Testing
@@ -438,7 +480,7 @@ The commands you need:
   order of calls, and break on refactors.
 - **HTTP goes through the real azcore pipeline.** `retail` is tested against an
   `httptest.Server`. The ARM adapter is tested with the SDK's generated fake
-  servers (`armcompute/v7/fake`, `armresourcegraph/fake`) set as
+  servers (`armcompute/v9/fake`, `armresourcegraph/fake`, `armsql/v2/fake`) set as
   `ClientOptions.Transport`, with `azfake.TokenCredential`, so the conversion
   from SDK types is tested against real SDK types. Set retry delays short in
   tests, so retries do not slow them down. Unit tests never call Azure.
@@ -447,12 +489,13 @@ The commands you need:
 
 - **Golden files only for multi-line rendered output.**
   `testdata/<name>.golden`, rewritten with a package `-update` flag
-  (`make golden-update`), for `output.Table`, `output.JSON` and
-  `writeVMResult`. Short strings, such as the headline, `Money` or
+  (`make golden-update`), for `output.Table`, `output.JSON`,
+  `writeVMResult` and the sql table and JSON writers. Short strings, such as the headline, `Money` or
   `describeFilter`, are checked inline, where the expected value can be read.
   Review the diff of a rewritten golden file as carefully as code.
-- **The JSON shape is recorded** in `cli/testdata/schema_<version>.txt` and
-  checked by `TestVMDocument_schema` (see
+- **The JSON shape is recorded** in `cli/testdata/schema_<version>.txt` for
+  `vm`, and `schema_<version>_<kind>.txt` for the others, such as `sql-db-vcore`, and
+  checked by `TestVMDocument_schema` and `TestSQLDocument_schema` (see
   [JSON output is a contract](#json-output-is-a-contract)).
 
 ### Parallel by default, always with `-race`
@@ -474,11 +517,11 @@ saying why:
   environment and has no way to inject another. Any cli test that goes through
   `setupViper` (`TestRoot`, `TestRoot_vmOptionsReachRunE`,
   `TestSetupViper_precedence`, `TestReadVMOptions_flags`) calls
-  `isolateEnv(t)` first, which clears the `AZSKUFINDER_*` variable of every
-  flag, so the developer's own settings cannot change the result. Their
+  `isolateEnv(t)` first, which clears every `AZSKUFINDER_*` variable, so the
+  developer's own settings cannot change the result. Their
   subtests can still be parallel. Our own environment reads take a
   `getenv func(string) string` (`colourFor`, `spinnerOn`), and other option
-  tests use `v.Set` (`vmViper`).
+  tests use `v.Set` (`bindViperFlags`).
 
 ### Fuzzing and coverage
 
@@ -497,7 +540,7 @@ saying why:
 `foo.go` is tested in `foo_test.go`, by `TestFunc` or `TestType_Method`, with
 each scenario a subtest named in lower case. Builders shared within a package go
 in its `helpers_test.go` (for example `skuOf` and its `with...` options in `vm`,
-`sampleResult` and `vmViper` in `cli`). There is no shared `testutil` package
+`sampleResult` and `bindViperFlags` in `cli`). There is no shared `testutil` package
 until the rule of three applies.
 
 ## Recipes
@@ -532,7 +575,10 @@ README.md updated if a flag, default or output changed.
 
 ### Add a new resource command
 
-For example, managed disks. Model it on `vm`:
+For example, managed disks. Model it on `vm`, or on `sql` for a command with
+nested subcommands, whose files are split one per subcommand
+(`cli/sql_db_vcore.go`, `cli/sql_db_dtu.go`) around a shared `cli/sql.go`, and
+whose rows of different shapes share one generic pipeline (`sql.findDB[T]`):
 
 1. **`internal/disk`** (package name = resource name):
    - `disk.go`: result types with JSON tags (`Disk`, `Result`, `Summary`,

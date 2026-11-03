@@ -21,5 +21,8 @@ azskufinder is a Go CLI that finds the Azure VM sizes a subscription can deploy.
 - **Keep the docs in step.** When a flag, default or output changes, update
   `README.md`. The `--sort-by` column list is written out by hand in both the
   README and the `vm` command's `Long` help text in `internal/cli/vm.go`.
+- **Check for documentation errors.** Updates made by external factors such as
+  renovate, may have invalidated documentation. Ensure it is accurate as part
+  of any updates you are asked to carry out.
 - **Write in British English** (colour, behaviour), in code comments and docs
   alike. The misspell linter checks this.

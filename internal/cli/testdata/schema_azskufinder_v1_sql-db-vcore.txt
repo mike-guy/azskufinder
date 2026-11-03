@@ -1,0 +1,55 @@
+apiVersion string
+criteria array
+criteria[] object
+criteria[].name string
+criteria[].value string
+kind string
+location string
+pricing object
+pricing.currency string
+pricing.hoursPerMonth number
+pricing.licence string
+pricing.zoneRedundant boolean
+results array
+results[] object
+results[].backupRedundancy array
+results[].backupRedundancy[] string
+results[].compute string
+results[].family string
+results[].hardware string
+results[].maxStorageGiB number nullable
+results[].memoryGiB number nullable
+results[].name string
+results[].pricing object
+results[].pricing.computeHourly number nullable
+results[].pricing.hourly number nullable
+results[].pricing.licenceHourly number nullable
+results[].pricing.monthly number nullable
+results[].pricing.zoneRedundancyHourly number nullable
+results[].quota array
+results[].quotaNeeded number
+results[].quota[] object
+results[].quota[].free number
+results[].quota[].limit number
+results[].quota[].name string
+results[].quota[].used number
+results[].sku string
+results[].tier string
+results[].vcores number
+results[].zoneRedundant boolean
+serverQuota object nullable
+serverQuota.free number
+serverQuota.limit number
+serverQuota.name string
+serverQuota.used number
+summary object
+summary.considered number
+summary.eligible number
+summary.matched number
+summary.noQuota number
+summary.restricted number
+summary.shown number
+warnings array
+warnings[] object
+warnings[].code string
+warnings[].message string

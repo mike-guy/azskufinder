@@ -20,8 +20,41 @@ import (
 func TestVMDocument_schema(t *testing.T) {
 	t.Parallel()
 
-	got := jsonSchema(t, reflect.TypeFor[vmDocument]())
-	path := filepath.Join("testdata", "schema_"+strings.ReplaceAll(jsonAPIVersion, "/", "_")+".txt")
+	checkSchema(t, reflect.TypeFor[vmDocument](), "")
+}
+
+// TestSQLDocument_schema does the same for the sql commands, each recorded in
+// its own file, as their documents share the version but not the shape.
+func TestSQLDocument_schema(t *testing.T) {
+	t.Parallel()
+
+	t.Run("sql-db-vcore", func(t *testing.T) {
+		t.Parallel()
+
+		checkSchema(t, reflect.TypeFor[sqlVCoreDocument](), "sql-db-vcore")
+	})
+
+	t.Run("sql-db-dtu", func(t *testing.T) {
+		t.Parallel()
+
+		checkSchema(t, reflect.TypeFor[sqlDTUDocument](), "sql-db-dtu")
+	})
+}
+
+// checkSchema compares the shape of typ with its record in
+// testdata/schema_<version>[_<kind>].txt. The vm document, the first, has no
+// kind in its file name.
+func checkSchema(t *testing.T, typ reflect.Type, kind string) {
+	t.Helper()
+
+	got := jsonSchema(t, typ)
+
+	name := "schema_" + strings.ReplaceAll(jsonAPIVersion, "/", "_")
+	if kind != "" {
+		name += "_" + kind
+	}
+
+	path := filepath.Join("testdata", name+".txt")
 
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) && *update {

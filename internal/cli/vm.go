@@ -3,8 +3,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -232,14 +230,7 @@ func runVM(cmd *cobra.Command, application *app.App) error {
 	prices := retail.NewClient(opts.Currency, clientOpts, application.Logger)
 	svc := vm.NewService(src, prices, application.Logger)
 
-	stderr := cmd.ErrOrStderr()
-	debug := application.LogLevel.Level() <= slog.LevelDebug
-
-	// spinner stays nil when it should not be shown; Stop on nil does nothing.
-	var spinner *output.Spinner
-	if spinnerOn(isTerminal(stderr), debug, os.Getenv) {
-		spinner = output.StartSpinner(stderr, application.Stderr, "Searching for VM SKUs in "+opts.Location+"…")
-	}
+	spinner := startSpinner(cmd.ErrOrStderr(), application, "Searching for VM SKUs in "+opts.Location+"…")
 	defer spinner.Stop() // also clears the line on a panic
 
 	res, err := svc.Find(ctx, opts.Location, opts.Filter)
@@ -253,15 +244,15 @@ func runVM(cmd *cobra.Command, application *app.App) error {
 		return err
 	}
 
-	printWarnings(stderr, application.Stderr, res.Warnings)
+	for _, w := range res.Warnings {
+		printWarning(cmd.ErrOrStderr(), application.Stderr, w.Message)
+	}
 
 	return nil
 }
 
-// printWarnings writes warnings to w, which is stderr, so that the results on
-// stdout stay clean to pipe. st is w's Styles.
-func printWarnings(w io.Writer, st output.Styles, warnings []vm.Warning) {
-	for _, warning := range warnings {
-		_, _ = fmt.Fprintln(w, st.Warn("warning: "+output.Sanitise(warning.Message)))
-	}
+// printWarning writes a warning message to w, which is stderr, so that the
+// results on stdout stay clean to pipe. st is w's Styles.
+func printWarning(w io.Writer, st output.Styles, message string) {
+	_, _ = fmt.Fprintln(w, st.Warn("warning: "+output.Sanitise(message)))
 }

@@ -136,7 +136,8 @@ func writeVMTable(w io.Writer, st output.Styles, opts vmOptions, res vm.Result) 
 
 func writeLines(b *strings.Builder, lines []string) {
 	for _, line := range lines {
-		b.WriteString(line + "\n")
+		b.WriteString(line)
+		b.WriteByte('\n')
 	}
 }
 
