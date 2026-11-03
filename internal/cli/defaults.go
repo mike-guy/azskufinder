@@ -6,17 +6,19 @@ import (
 	"time"
 
 	"github.com/mike-guy/azskufinder/internal/output"
+	"github.com/mike-guy/azskufinder/internal/sql"
 	"github.com/mike-guy/azskufinder/internal/vm"
 )
 
 const envPrefix = "AZSKUFINDER"
 
 const (
-	defaultOutput   = output.FormatTable
-	defaultCurrency = "GBP"
-	defaultLimit    = 25
-	defaultTimeout  = 2 * time.Minute
-	defaultOS       = string(vm.OSLinux)
+	defaultOutput     = output.FormatTable
+	defaultCurrency   = "GBP"
+	defaultLimit      = 25
+	defaultTimeout    = 2 * time.Minute
+	defaultOS         = string(vm.OSLinux)
+	defaultSQLLicence = string(sql.LicenceIncluded)
 )
 
 // currencies are the --currency values accepted. The Retail Prices API takes

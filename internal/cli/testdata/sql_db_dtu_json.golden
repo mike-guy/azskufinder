@@ -1,0 +1,107 @@
+{
+  "apiVersion": "azskufinder/v1",
+  "kind": "sql-db-dtu",
+  "criteria": [
+    {
+      "name": "DTUs",
+      "value": ">= 100"
+    }
+  ],
+  "pricing": {
+    "currency": "GBP",
+    "hoursPerMonth": 730
+  },
+  "location": "uksouth",
+  "summary": {
+    "considered": 16,
+    "matched": 5,
+    "restricted": 0,
+    "noQuota": 0,
+    "eligible": 5,
+    "shown": 3
+  },
+  "serverQuota": {
+    "name": "ServerQuota",
+    "limit": 250,
+    "used": 1,
+    "free": 249
+  },
+  "results": [
+    {
+      "name": "S3",
+      "tier": "standard",
+      "dtus": 100,
+      "maxStorageGiB": 1024,
+      "zoneRedundant": false,
+      "backupRedundancy": [
+        "local",
+        "zone",
+        "geo"
+      ],
+      "quotaNeeded": 1,
+      "quota": [
+        {
+          "name": "RegionalVCoreQuotaForSQLDBAndDW",
+          "limit": 150,
+          "used": 4,
+          "free": 146
+        }
+      ],
+      "pricing": {
+        "hourly": 0.1895,
+        "monthly": 138.31
+      }
+    },
+    {
+      "name": "P1",
+      "tier": "premium",
+      "dtus": 125,
+      "maxStorageGiB": 1024,
+      "zoneRedundant": true,
+      "backupRedundancy": [
+        "local",
+        "zone",
+        "geo"
+      ],
+      "quotaNeeded": 2,
+      "quota": [
+        {
+          "name": "RegionalVCoreQuotaForSQLDBAndDW",
+          "limit": 150,
+          "used": 4,
+          "free": 146
+        }
+      ],
+      "pricing": {
+        "hourly": 0.5874,
+        "monthly": 428.79
+      }
+    },
+    {
+      "name": "S12",
+      "tier": "standard",
+      "dtus": 3000,
+      "maxStorageGiB": 1024,
+      "zoneRedundant": false,
+      "backupRedundancy": [
+        "local",
+        "zone",
+        "geo"
+      ],
+      "quotaNeeded": 30,
+      "quota": [
+        {
+          "name": "RegionalVCoreQuotaForSQLDBAndDW",
+          "limit": 150,
+          "used": 4,
+          "free": 146
+        }
+      ],
+      "pricing": {
+        "hourly": null,
+        "monthly": null
+      }
+    }
+  ],
+  "warnings": []
+}

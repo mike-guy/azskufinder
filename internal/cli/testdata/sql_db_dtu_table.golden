@@ -1,0 +1,16 @@
+
+5 matching SKUs in uksouth
+Showing 3 of 5 deployable SKUs with filters:
+ - DTUs >= 100
+
+NAME  TIER      DTUS  MAXSTORAGE  ZR   FREEQUOTA   HOURLY  MONTHLY
+──────────────────────────────────────────────────────────────────
+S3    standard   100       1 TiB  no         146  £0.1895  £138.31
+P1    premium    125       1 TiB  yes        146  £0.5874  £428.79
+S12   standard  3000       1 TiB  no         146        -        -
+
+Use --limit 0 to show all 5.
+Prices: pay-as-you-go estimates in GBP for the SKU, including the SQL licence, at 730 hours a month; storage, backup, reservations and discounts are not included.
+1 has no retail price from Azure, so its price is shown as -.
+FREEQUOTA is the regional vCore quota: each 100 DTUs, rounded up, uses 1 vCore.
+Logical servers: 249 of 250 free in uksouth.

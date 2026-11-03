@@ -16,7 +16,6 @@ import (
 	azruntime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/mike-guy/azskufinder/internal/app"
@@ -66,36 +65,38 @@ func newTestRoot(t *testing.T) (root *cobra.Command, stdout, stderr *bytes.Buffe
 	return root, stdout, stderr
 }
 
-// vmCmd returns the vm subcommand of root.
-func vmCmd(t *testing.T, root *cobra.Command) *cobra.Command {
+// subCmd returns the subcommand of root at path, such as "sql", "db".
+func subCmd(t *testing.T, root *cobra.Command, path ...string) *cobra.Command {
 	t.Helper()
 
-	cmd, _, err := root.Find([]string{"vm"})
-	if err != nil || cmd.Name() != "vm" {
-		t.Fatalf("root.Find(vm) = %v, %v, want the vm command", cmd, err)
+	cmd, _, err := root.Find(path)
+	if err != nil || cmd.Name() != path[len(path)-1] {
+		t.Fatalf("root.Find(%v) = %v, %v, want that command", path, cmd, err)
 	}
 
 	return cmd
 }
 
-// isolateEnv clears the environment variable of every flag, so that the
-// developer's own AZSKUFINDER_* settings cannot change a test that reads the
-// environment through viper. An empty variable counts as unset. It uses
-// t.Setenv, so the test cannot call t.Parallel, though its subtests can.
+// isolateEnv clears every AZSKUFINDER_* environment variable, so that the
+// developer's own settings cannot change a test that reads the environment
+// through viper. An empty variable counts as unset. It uses t.Setenv, so the
+// test cannot call t.Parallel, though its subtests can.
 func isolateEnv(t *testing.T) {
 	t.Helper()
 
-	root, _, _ := newTestRoot(t)
-
-	for _, flags := range []*pflag.FlagSet{root.PersistentFlags(), vmCmd(t, root).Flags()} {
-		flags.VisitAll(func(f *pflag.Flag) { t.Setenv(envName(f.Name), "") })
+	for _, kv := range os.Environ() {
+		name, _, _ := strings.Cut(kv, "=")
+		if strings.HasPrefix(name, envPrefix+"_") {
+			t.Setenv(name, "")
+		}
 	}
 }
 
-// vmViper returns a viper bound to the real root and vm flags, so that their
-// defaults apply, with each entry of set applied on top as if it came from the
-// environment or config file. It does not read the environment.
-func vmViper(t *testing.T, set map[string]any) *viper.Viper {
+// bindViperFlags returns a viper bound to the real root flags and those of the
+// command at path, so that their defaults apply, with each entry of set applied
+// on top as if it came from the environment or config file. It does not read
+// the environment.
+func bindViperFlags(t *testing.T, set map[string]any, path ...string) *viper.Viper {
 	t.Helper()
 
 	root, _, _ := newTestRoot(t)
@@ -105,8 +106,8 @@ func vmViper(t *testing.T, set map[string]any) *viper.Viper {
 		t.Fatalf("binding root flags: %v", err)
 	}
 
-	if err := v.BindPFlags(vmCmd(t, root).Flags()); err != nil {
-		t.Fatalf("binding vm flags: %v", err)
+	if err := v.BindPFlags(subCmd(t, root, path...).Flags()); err != nil {
+		t.Fatalf("binding %v flags: %v", path, err)
 	}
 
 	for k, val := range set {
@@ -116,8 +117,8 @@ func vmViper(t *testing.T, set map[string]any) *viper.Viper {
 	return v
 }
 
-// validVM is the smallest set of settings readVMOptions accepts.
-func validVM() map[string]any {
+// validCommon is the smallest set of settings every command accepts.
+func validCommon() map[string]any {
 	return map[string]any{
 		"subscription-id": testSubscriptionID,
 		"location":        "uksouth",

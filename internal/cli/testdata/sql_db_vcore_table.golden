@@ -1,0 +1,22 @@
+
+12 matching SKUs in uksouth
+Showing 3 of 7 deployable SKUs with filters:
+ - Tier general-purpose or hyperscale
+ - vCores >= 4
+ - Zone Redundant yes
+2 restricted for this subscription
+3 without enough quota
+
+NAME         TIER               COMPUTE      HARDWARE         VCORES    MEMORY  MAXSTORAGE  ZR   FREEQUOTA   HOURLY   MONTHLY
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+GP_Gen5_4    general-purpose    provisioned  standard-series       4  20.4 GiB       1 TiB  yes        146  £0.5740   £419.02
+HS_S_Gen5_4  hyperscale         serverless   standard-series       4      auto     128 TiB  yes          -  £1.4135  £1031.84
+BC_DC_4      business-critical  provisioned  dc-series             4    18 GiB     768 GiB  no         146        -         -
+
+Use --limit 0 to show all 7.
+Prices: pay-as-you-go estimates in GBP for compute, with Azure Hybrid Benefit covering the SQL licence, at 730 hours a month; storage, backup, reservations and discounts are not included.
+Azure Hybrid Benefit does not apply to Hyperscale or serverless, which have no separate licence fee.
+Serverless is billed per second of use; its price is for its maximum vCores for 730 hours, and its memory scales with the workload (auto).
+Zone redundancy surcharges are included where Azure charges one.
+1 has no retail price from Azure, so its price is shown as -.
+Logical servers: 249 of 250 free in uksouth.

@@ -1,0 +1,139 @@
+{
+  "apiVersion": "azskufinder/v1",
+  "kind": "sql-db-vcore",
+  "criteria": [
+    {
+      "name": "tier",
+      "value": "general-purpose or hyperscale"
+    },
+    {
+      "name": "vCores",
+      "value": ">= 4"
+    },
+    {
+      "name": "zone redundant",
+      "value": "yes"
+    }
+  ],
+  "pricing": {
+    "currency": "GBP",
+    "licence": "ahb",
+    "zoneRedundant": true,
+    "hoursPerMonth": 730
+  },
+  "location": "uksouth",
+  "summary": {
+    "considered": 170,
+    "matched": 12,
+    "restricted": 2,
+    "noQuota": 3,
+    "eligible": 7,
+    "shown": 3
+  },
+  "serverQuota": {
+    "name": "ServerQuota",
+    "limit": 250,
+    "used": 1,
+    "free": 249
+  },
+  "results": [
+    {
+      "name": "GP_Gen5_4",
+      "sku": "GP_Gen5",
+      "tier": "general-purpose",
+      "compute": "provisioned",
+      "hardware": "standard-series",
+      "family": "Gen5",
+      "vcores": 4,
+      "memoryGiB": 20.4,
+      "maxStorageGiB": 1024,
+      "zoneRedundant": true,
+      "backupRedundancy": [
+        "local",
+        "zone",
+        "geo"
+      ],
+      "quotaNeeded": 4,
+      "quota": [
+        {
+          "name": "RegionalVCoreQuotaForSQLDBAndDW",
+          "limit": 150,
+          "used": 4,
+          "free": 146
+        }
+      ],
+      "pricing": {
+        "hourly": 0.574,
+        "monthly": 419.02,
+        "computeHourly": 0.574,
+        "licenceHourly": null,
+        "zoneRedundancyHourly": null
+      }
+    },
+    {
+      "name": "HS_S_Gen5_4",
+      "sku": "HS_S_Gen5",
+      "tier": "hyperscale",
+      "compute": "serverless",
+      "hardware": "standard-series",
+      "family": "Gen5",
+      "vcores": 4,
+      "memoryGiB": null,
+      "maxStorageGiB": 131072,
+      "zoneRedundant": true,
+      "backupRedundancy": [
+        "local",
+        "zone",
+        "geo"
+      ],
+      "quotaNeeded": 4,
+      "quota": [],
+      "pricing": {
+        "hourly": 1.4135,
+        "monthly": 1031.84,
+        "computeHourly": 1.4135,
+        "licenceHourly": null,
+        "zoneRedundancyHourly": null
+      }
+    },
+    {
+      "name": "BC_DC_4",
+      "sku": "BC_DC",
+      "tier": "business-critical",
+      "compute": "provisioned",
+      "hardware": "dc-series",
+      "family": "DC",
+      "vcores": 4,
+      "memoryGiB": 18,
+      "maxStorageGiB": 768,
+      "zoneRedundant": false,
+      "backupRedundancy": [
+        "local",
+        "zone",
+        "geo"
+      ],
+      "quotaNeeded": 4,
+      "quota": [
+        {
+          "name": "RegionalVCoreQuotaForSQLDBAndDW",
+          "limit": 150,
+          "used": 4,
+          "free": 146
+        }
+      ],
+      "pricing": {
+        "hourly": null,
+        "monthly": null,
+        "computeHourly": null,
+        "licenceHourly": null,
+        "zoneRedundancyHourly": null
+      }
+    }
+  ],
+  "warnings": [
+    {
+      "code": "quota-missing",
+      "message": "no quota entry"
+    }
+  ]
+}

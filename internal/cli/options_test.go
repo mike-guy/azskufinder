@@ -205,7 +205,7 @@ func TestReadVMOptions(t *testing.T) {
 	}{
 		{
 			name: "defaults",
-			set:  validVM(),
+			set:  validCommon(),
 			want: func(*vmOptions) {},
 		},
 		{
@@ -223,7 +223,7 @@ func TestReadVMOptions(t *testing.T) {
 		},
 		{
 			name: "no limit",
-			set:  with(validVM(), map[string]any{"limit": 0}),
+			set:  with(validCommon(), map[string]any{"limit": 0}),
 			want: func(o *vmOptions) {
 				o.Limit = 0
 				o.Filter.Limit = 0
@@ -231,7 +231,7 @@ func TestReadVMOptions(t *testing.T) {
 		},
 		{
 			name: "exact requirements",
-			set:  with(validVM(), map[string]any{"cpus": 4, "memory": "16", "gpus": 0, "nics": 2, "exact-match": true}),
+			set:  with(validCommon(), map[string]any{"cpus": 4, "memory": "16", "gpus": 0, "nics": 2, "exact-match": true}),
 			want: func(o *vmOptions) {
 				o.Filter.CPUs = new(4)
 				o.Filter.MemoryGiB = new(16.0)
@@ -242,47 +242,47 @@ func TestReadVMOptions(t *testing.T) {
 		},
 		{
 			name: "timeout",
-			set:  with(validVM(), map[string]any{"timeout": " 90s "}),
+			set:  with(validCommon(), map[string]any{"timeout": " 90s "}),
 			want: func(o *vmOptions) { o.Timeout = 90 * time.Second },
 		},
 		{
 			name: "no timeout",
-			set:  with(validVM(), map[string]any{"timeout": "0"}),
+			set:  with(validCommon(), map[string]any{"timeout": "0"}),
 			want: func(o *vmOptions) { o.Timeout = 0 },
 		},
 		{
 			name: "windows",
-			set:  with(validVM(), map[string]any{"os": "Windows"}),
+			set:  with(validCommon(), map[string]any{"os": "Windows"}),
 			want: func(o *vmOptions) { o.Filter.OS = vm.OSWindows },
 		},
 		{
 			name: "arm64",
-			set:  with(validVM(), map[string]any{"arch": "arm64"}),
+			set:  with(validCommon(), map[string]any{"arch": "arm64"}),
 			want: func(o *vmOptions) { o.Filter.Arch = vm.ArchARM64 },
 		},
 		{
 			name: "categories",
-			set:  with(validVM(), map[string]any{"category": "memory,gpu"}),
+			set:  with(validCommon(), map[string]any{"category": "memory,gpu"}),
 			want: func(o *vmOptions) { o.Filter.Categories = []vm.Category{vm.CategoryMemory, vm.CategoryGPU} },
 		},
 		{
 			name: "disk controller",
-			set:  with(validVM(), map[string]any{"disk-controller": "NVMe"}),
+			set:  with(validCommon(), map[string]any{"disk-controller": "NVMe"}),
 			want: func(o *vmOptions) { o.Filter.DiskController = vm.DiskControllerNVMe },
 		},
 		{
 			name: "any disk controller",
-			set:  with(validVM(), map[string]any{"disk-controller": "any"}),
+			set:  with(validCommon(), map[string]any{"disk-controller": "any"}),
 			want: func(*vmOptions) {},
 		},
 		{
 			name: "sort descending",
-			set:  with(validVM(), map[string]any{"sort-by": "memory:desc"}),
+			set:  with(validCommon(), map[string]any{"sort-by": "memory:desc"}),
 			want: func(o *vmOptions) { o.Filter.Sort = vm.Sort{Key: vm.SortMemory, Desc: true} },
 		},
 		{
 			name: "sort by spot with spot",
-			set:  with(validVM(), map[string]any{"sort-by": "spot", "include-spot": "true"}),
+			set:  with(validCommon(), map[string]any{"sort-by": "spot", "include-spot": "true"}),
 			want: func(o *vmOptions) {
 				o.Filter.Sort = vm.Sort{Key: vm.SortSpot}
 				o.Filter.IncludeSpot = true
@@ -297,7 +297,7 @@ func TestReadVMOptions(t *testing.T) {
 			want := defaults()
 			tc.want(&want)
 
-			got, err := readVMOptions(vmViper(t, tc.set))
+			got, err := readVMOptions(bindViperFlags(t, tc.set, "vm"))
 			if err != nil {
 				t.Fatalf("readVMOptions(%v) error = %v", tc.set, err)
 			}
@@ -326,7 +326,7 @@ func TestReadVMOptions_errors(t *testing.T) {
 		},
 		{
 			name:    "malformed subscription",
-			set:     with(validVM(), map[string]any{"subscription-id": "my-sub"}),
+			set:     with(validCommon(), map[string]any{"subscription-id": "my-sub"}),
 			wantMsg: `--subscription-id must look like 00000000-0000-0000-0000-000000000000, got "my-sub"`,
 		},
 		{
@@ -337,103 +337,103 @@ func TestReadVMOptions_errors(t *testing.T) {
 		},
 		{
 			name:    "bad location quotes the input",
-			set:     with(validVM(), map[string]any{"location": "UK South"}),
+			set:     with(validCommon(), map[string]any{"location": "UK South"}),
 			wantMsg: `--location must be an Azure location name such as uksouth, got "UK South"`,
 		},
 		{
 			name:    "bad output",
-			set:     with(validVM(), map[string]any{"output": "xml"}),
+			set:     with(validCommon(), map[string]any{"output": "xml"}),
 			wantMsg: `--output: unknown output format "xml": use one of table, json`,
 		},
 		{
 			name:    "bad currency",
-			set:     with(validVM(), map[string]any{"currency": "pounds"}),
+			set:     with(validCommon(), map[string]any{"currency": "pounds"}),
 			wantMsg: `--currency must be one of GBP, USD, EUR, got "pounds"`,
 		},
 		{
 			name:    "unsupported currency",
-			set:     with(validVM(), map[string]any{"currency": "XYZ"}),
+			set:     with(validCommon(), map[string]any{"currency": "XYZ"}),
 			wantMsg: `--currency must be one of GBP, USD, EUR, got "XYZ"`,
 		},
 		{
 			name:    "negative limit",
-			set:     with(validVM(), map[string]any{"limit": "-1"}),
+			set:     with(validCommon(), map[string]any{"limit": "-1"}),
 			wantMsg: "--limit must not be negative, got -1",
 		},
 		{
 			name:    "timeout without a unit",
-			set:     with(validVM(), map[string]any{"timeout": 30}),
+			set:     with(validCommon(), map[string]any{"timeout": 30}),
 			wantMsg: `--timeout must be a duration such as 90s or 2m, got "30"`,
 		},
 		{
 			name:    "bad timeout",
-			set:     with(validVM(), map[string]any{"timeout": "abc"}),
+			set:     with(validCommon(), map[string]any{"timeout": "abc"}),
 			wantMsg: `--timeout must be a duration such as 90s or 2m, got "abc"`,
 		},
 		{
 			name:    "bad os",
-			set:     with(validVM(), map[string]any{"os": "macos"}),
+			set:     with(validCommon(), map[string]any{"os": "macos"}),
 			wantMsg: `--os: unknown operating system "macos": use linux or windows`,
 		},
 		{
 			name:    "bad include-spot",
-			set:     with(validVM(), map[string]any{"include-spot": "yes"}),
+			set:     with(validCommon(), map[string]any{"include-spot": "yes"}),
 			wantMsg: `--include-spot must be true or false, got "yes"`,
 		},
 		{
 			name:    "bad sort",
-			set:     with(validVM(), map[string]any{"sort-by": "price"}),
+			set:     with(validCommon(), map[string]any{"sort-by": "price"}),
 			wantMsg: `--sort-by: unknown column "price", choose one of: ` + strings.Join(vm.SortKeyNames(), ", "),
 		},
 		{
 			name:     "sort by eviction without spot",
-			set:      with(validVM(), map[string]any{"sort-by": "eviction"}),
+			set:      with(validCommon(), map[string]any{"sort-by": "eviction"}),
 			wantMsg:  "--sort-by eviction needs Spot data",
 			wantHint: "Add --include-spot.",
 		},
 		{
 			name:    "bad cpus",
-			set:     with(validVM(), map[string]any{"cpus": "four"}),
+			set:     with(validCommon(), map[string]any{"cpus": "four"}),
 			wantMsg: `--cpus must be a whole number, got "four"`,
 		},
 		{
 			name:    "bad memory",
-			set:     with(validVM(), map[string]any{"memory": "lots"}),
+			set:     with(validCommon(), map[string]any{"memory": "lots"}),
 			wantMsg: `--memory must be a number of at least 0, got "lots"`,
 		},
 		{
 			name:    "bad nics",
-			set:     with(validVM(), map[string]any{"nics": "three"}),
+			set:     with(validCommon(), map[string]any{"nics": "three"}),
 			wantMsg: `--nics must be a whole number, got "three"`,
 		},
 		{
 			name:    "negative nics",
-			set:     with(validVM(), map[string]any{"nics": "-1"}),
+			set:     with(validCommon(), map[string]any{"nics": "-1"}),
 			wantMsg: "--nics must not be negative, got -1",
 		},
 		{
 			name:    "bad gpus",
-			set:     with(validVM(), map[string]any{"gpus": "-2"}),
+			set:     with(validCommon(), map[string]any{"gpus": "-2"}),
 			wantMsg: "--gpus must not be negative, got -2",
 		},
 		{
 			name:    "bad exact-match",
-			set:     with(validVM(), map[string]any{"exact-match": "maybe"}),
+			set:     with(validCommon(), map[string]any{"exact-match": "maybe"}),
 			wantMsg: `--exact-match must be true or false, got "maybe"`,
 		},
 		{
 			name:    "bad arch",
-			set:     with(validVM(), map[string]any{"arch": "riscv"}),
+			set:     with(validCommon(), map[string]any{"arch": "riscv"}),
 			wantMsg: `--arch: unknown architecture "riscv": use one of any, x64, arm64`,
 		},
 		{
 			name:    "bad category",
-			set:     with(validVM(), map[string]any{"category": "memory,fast"}),
+			set:     with(validCommon(), map[string]any{"category": "memory,fast"}),
 			wantMsg: `--category: unknown category "fast": use one of ` + strings.Join(vm.CategoryNames(), ", "),
 		},
 		{
 			name:    "bad disk controller",
-			set:     with(validVM(), map[string]any{"disk-controller": "ide"}),
+			set:     with(validCommon(), map[string]any{"disk-controller": "ide"}),
 			wantMsg: `--disk-controller: unknown disk controller "ide": use one of any, scsi, nvme`,
 		},
 	}
@@ -442,7 +442,7 @@ func TestReadVMOptions_errors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := readVMOptions(vmViper(t, tc.set))
+			_, err := readVMOptions(bindViperFlags(t, tc.set, "vm"))
 			checkUsageError(t, err, tc.wantMsg, tc.wantHint)
 		})
 	}
@@ -474,7 +474,7 @@ func TestReadVMOptions_flags(t *testing.T) { //nolint:paralleltest,tparallel // 
 			t.Parallel()
 
 			root, _, _ := newTestRoot(t)
-			cmd := vmCmd(t, root)
+			cmd := subCmd(t, root, "vm")
 
 			args := append([]string{
 				"--config", writeConfig(t, tc.config),

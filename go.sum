@@ -16,6 +16,8 @@ github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armdeployments v
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armdeployments v1.0.0/go.mod h1:fewgRjNVE84QVVh798sIMFb7gPXPp7NmnekGnboSnXk=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources/v3 v3.0.1 h1:guyQA4b8XB2sbJZXzUnOF9mn0WDBv/ZT7me9wTipKtE=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources/v3 v3.0.1/go.mod h1:8h8yhzh9o+0HeSIhUxYny+rEQajScrfIpNktvgYG3Q8=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/sql/armsql/v2 v2.0.0-beta.9 h1:NuDFx/l+n+xZoEQxih0Qr19MrD9awtNww9Ev1HDmPWY=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/sql/armsql/v2 v2.0.0-beta.9/go.mod h1:tqP6YJ3nUnAJKv0IlQV0sDyg9pIu+ZXfuInBsCAfiU0=
 github.com/AzureAD/microsoft-authentication-extensions-for-go/cache v0.1.1 h1:WJTmL004Abzc5wDB5VtZG2PJk5ndYDgVacGqfirKxjM=
 github.com/AzureAD/microsoft-authentication-extensions-for-go/cache v0.1.1/go.mod h1:tCcJZ0uHAmvjsVYzEFivsRTN00oz5BEsRgQHu5JZ9WE=
 github.com/AzureAD/microsoft-authentication-library-for-go v1.10.1 h1:0O6j18nQDoIff6/mtosT5LNU2WehEwp+LqfX6699oqY=
