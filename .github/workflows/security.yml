@@ -34,7 +34,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Setup Mise
-        uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Scan For Secrets
@@ -54,7 +54,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Setup Mise
-        uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Check For Vulnerabilities
@@ -75,7 +75,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Setup Mise
-        uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           version: ${{ env.MISE_VERSION }}
       # Trivy's vulnerability database, refreshed daily.
@@ -92,7 +92,7 @@ jobs:
       - name: Generate Trivy Report
         run: mise exec -- trivy fs --format sarif --output trivy.sarif --exit-code 0 .
       - name: Upload Results To Code Scanning
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         if: always()
         with:
           sarif_file: trivy.sarif
@@ -116,12 +116,12 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Initialise CodeQL
-        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: go
           build-mode: autobuild
           queries: security-and-quality
       - name: Analyse With CodeQL
-        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: codeql
