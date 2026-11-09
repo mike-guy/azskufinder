@@ -18,7 +18,7 @@ permissions: {}
 
 env:
   # renovate: datasource=github-releases depName=jdx/mise
-  MISE_VERSION: 2026.10.24
+  MISE_VERSION: 2026.11.3
 
 concurrency:
   group: release
