@@ -90,6 +90,10 @@ changelog:
       order: 999
 
 release:
+  # A draft, so the release workflow can attach the attestation before it
+  # publishes the release: a published release is immutable. The Homebrew and
+  # Scoop manifests are pushed now, so their downloads 404 until it's published.
+  draft: true
   github:
     owner: mike-guy
     name: azskufinder

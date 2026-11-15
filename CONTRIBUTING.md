@@ -89,10 +89,17 @@ gh workflow run release.yml -f version=v1.0.0   # or choose it, for example for 
 gh workflow run release.yml -f dry_run=true     # build everything, publish nothing
 ```
 
-It tags the release, publishes it with GoReleaser, and updates the Homebrew tap
-and Scoop bucket. If no commit since the last release calls for a new version,
-it stops without releasing. If it fails part way through, re-running the
-failed jobs is safe.
+It tags the release, builds it with GoReleaser as a draft, attaches the
+attestation, then publishes it, and updates the Homebrew tap and Scoop bucket.
+The tap and bucket are updated before the release is published, so installs
+through them fail for a few minutes. If no commit since the last release calls
+for a new version, it stops without releasing. If it fails before the final
+`Publish Release` step, re-running the failed jobs is safe.
+
+Releases are immutable once published: their assets and tag can't change, and a
+version can't be reused. If a published release is wrong, release a new version.
+The release notes can still be edited, for example with
+`gh release edit v1.0.0 --notes-file notes.md`.
 
 A message that isn't conventional fails the `commits` check on the pull request.
 To fix the most recent commit, run `git commit --amend`. For an older one, run
